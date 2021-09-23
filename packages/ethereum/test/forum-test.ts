@@ -75,7 +75,33 @@ describe("Forum", function () {
       const post = await forum.getPost(postId)
       expect(post.id).to.equal(postId)
       expect(post.author).to.equal(mainAccount)
-      expect(post.content).to.deep.equal(postObj)
+      expect(post.content.body).to.equal(postObj.body)
+      expect(post.content.refs).to.be.empty
+    })
+
+    it("Should store attachments to a post", async () => {
+      const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
+      const postObj = { 
+        body: "This is an amazing post!", 
+        attachments: [
+          { name: 'file.txt', content: "Some text content" }
+        ] 
+      }
+
+      stubStoragePut(cid)
+      const postId = await forum.addPost(postObj)
+      expect(postId).to.not.be.empty
+      stubGetFile(JSON.stringify(postObj))
+
+      const post = await forum.getPost(postId)
+      expect(post.content.attachments).to.be.undefined // attachments are converted to refs when adding
+      expect(post.content.refs).to.not.be.empty
+      expect(post.content.refs![0].name).to.equal('file.txt')
+      expect(post.content.refs![0].ipfsPath).to.not.be.empty
+    })
+
+    it("Should fail to retrieve a post that does not exist", async () => {
+      expect(forum.getPost(123)).to.be.rejectedWith('No post found')
     })
   })
 
@@ -96,7 +122,13 @@ describe("Forum", function () {
       const c = await forum.getComment(commentId)
       expect(c.id).to.equal(commentId)
       expect(c.author).to.equal(mainAccount)
-      expect(c.content).to.deep.equal(commentObj)
+      expect(c.content.postId).to.equal(commentObj.postId)
+      expect(c.content.body).to.equal(commentObj.body)
+      expect(c.content.refs).to.be.empty
+    })
+
+    it("Should fail to retrieve a comment that does not exist", async () => {
+      expect(forum.getComment(123)).to.be.rejectedWith('No comment found')
     })
 
     it("Should not add comments for a post that doesn't exist", async () => {

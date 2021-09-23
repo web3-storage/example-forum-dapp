@@ -6,21 +6,37 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 
 contract Forum {
   using Counters for Counters.Counter;
-  Counters.Counter private ids;
   
+  /**
+    * @notice Represents a single forum post. 
+    */
   struct Post {
+    /// @notice Unique post id, assigned at post creation.
     uint256 id;
+
+    /// @notice address of post author.
     address author;
+
+    /// @notice IPFS CID of post content.
     string contentCID;
   }
 
+  /// @notice Represents a comment attached to a forum post.
   struct Comment {
+    /// @notice Unique comment id, assigned at comment creation.
     uint256 id;
+
+    /// @notice address of comment author.
     address author;
+
+    /// @notice Unique id of post this comment belongs to.
     uint256 postId;
+
+    /// @notice IPFS CID of comment content.
     string contentCID;
   }
 
+  /// @notice Vote state for a particular post or comment.
   struct VoteCount {
     // mapping of hash(voterAddress) => vote, where +1 == upvote, -1 == downvote, and 0 == not yet voted
     mapping(bytes32 => int8) votes;
@@ -29,28 +45,50 @@ contract Forum {
     int256 total;
   }
 
+  /// @notice Per-author vote totals for posts and comments.
   struct Karma {
+    /// @notice total of all votes for posts by this author.
     int256 post;
+
+    /// @notice total of all votes for comments by this author.
     int256 comment;
   }
 
+  /// @dev counter for issuing post and comment ids.
+  Counters.Counter private ids;
+
+  /// @dev maps post or comment id to vote state
   mapping(uint256 => VoteCount) private votes;
+
+  /// @dev maps author address to vote totals
   mapping(address => Karma) private authorKarma;
+
+  /// @dev maps post id to posts
   mapping(uint256 => Post) private posts;
+
+  /// @dev maps comment id to comments
   mapping(uint256 => Comment) private comments;
+
+  /// @dev maps post id to comment ids attached to post
   mapping(uint256 => uint256[]) private postComments;
 
+  /// @notice NewPost events are emitted when a post is created.
   event NewPost(
     uint256 indexed id,
     address indexed author
   );
 
+  /// @notice NewComment events are emitted when a comment is created.
   event NewComment(
     uint256 indexed id,
     address indexed author,
     uint indexed postId
   );
 
+  /**
+    * @notice Create a new post.
+    * @param contentCID IPFS CID of post content object.
+   */
   function addPost(string memory contentCID) public {
     ids.increment();
     uint256 id = ids.current();
@@ -60,6 +98,11 @@ contract Forum {
     emit NewPost(id, author);
   }
 
+  /**
+    * @notice Fetch a post by id.
+    * @dev Will always return a Post object, even if no post exists with the given id! 
+    *      If the post does not exist, the returned Post will have empty values for all fields.
+    */
   function getPost(uint256 postId) public view returns (Post memory) {
     return posts[postId];
   }
