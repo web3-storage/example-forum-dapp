@@ -15,9 +15,11 @@ import Forum from '../src/forum'
 import type { Forum as ForumContract } from '../typechain/Forum'
 import ForumArtifact from '../artifacts/contracts/Forum.sol/Forum.json'
 
-import { Upvote, Downvote, NoVote, VoteValue } from '../src/types'
+import { Upvote, Downvote, NoVote, VoteValue, Address } from '../src/types'
 
 describe("Forum", function () {
+  let mainAccount: Address
+  let otherAccount: Address
   let forum: Forum
   let otherUserForum: Forum
   let storage: Web3Storage
@@ -45,6 +47,8 @@ describe("Forum", function () {
   async function fixture() {
     const signers = await ethers.getSigners()
     const contract = (await deployContract(signers[0], ForumArtifact)) as ForumContract
+    mainAccount = signers[0].address
+    otherAccount = signers[1].address
     return {contract, signers};
   }
 
@@ -70,6 +74,7 @@ describe("Forum", function () {
 
       const post = await forum.getPost(postId)
       expect(post.id).to.equal(postId)
+      expect(post.author).to.equal(mainAccount)
       expect(post.content).to.deep.equal(postObj)
     })
   })
@@ -90,6 +95,7 @@ describe("Forum", function () {
       stubGetFile(JSON.stringify(commentObj))
       const c = await forum.getComment(commentId)
       expect(c.id).to.equal(commentId)
+      expect(c.author).to.equal(mainAccount)
       expect(c.content).to.deep.equal(commentObj)
     })
 

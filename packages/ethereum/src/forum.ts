@@ -36,13 +36,14 @@ export default class Forum {
   async getPost(postId: PostId): Promise<Post> {
     // Get the post information from the contract
     const postStruct = await this.#contract.getPost(postId)
-    const { contentCID } = postStruct
+    const { contentCID, author } = postStruct
+    const id = postStruct.id.toString()
 
     // use the CID to fetch the post content
     const postObject = await this.#getJson(contentCID)
     // TODO: validate postObject
     const content = postObject as PostContent
-    return { content, id: postStruct.id.toString() }
+    return { content, contentCID, id, author }
   }
 
   async addComment(comment: CommentContent): Promise<CommentId> {
@@ -57,10 +58,14 @@ export default class Forum {
   }
 
   async getComment(commentId: CommentId): Promise<Comment> {
+    // Get comment info from the contract
     const commentStruct = await this.#contract.getComment(commentId)
-    const { contentCID } = commentStruct
+    const { contentCID, author } = commentStruct
+    const id = commentStruct.id.toString()
+    
+    // use contentCID to fetch comment content
     const content = await this.#getJson(contentCID) as CommentContent // TODO: validate
-    return { content, id: commentStruct.id.toString() }
+    return { content, contentCID, author, id }
   }
 
   async getCommentsForPost(postId: PostId): Promise<Comment[]> {
@@ -106,7 +111,7 @@ export default class Forum {
   }
 }
 
-function idFromEvents(targetEvent: string, events: Event[] | undefined): string | undefined {
+function idFromEvents(targetEvent: string, events: Event[] | undefined): PostId | CommentId | undefined {
   if (!events) {
     return
   }

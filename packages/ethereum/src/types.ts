@@ -1,10 +1,15 @@
+import type { BigNumberish } from 'ethers'
 
-export type PostId = string
-export type CommentId = string
+export type PostId = BigNumberish
+export type CommentId = BigNumberish
+export type Address = string
+export type CIDString = string
 
 export interface Post {
-  content: PostContent,
   id: PostId,
+  author: Address,
+  content: PostContent,
+  contentCID: CIDString,
 }
 
 export interface PostContent {
@@ -12,8 +17,10 @@ export interface PostContent {
 }
 
 export interface Comment {
-  content: CommentContent,
   id: CommentId,
+  author: Address,
+  content: CommentContent,
+  contentCID: CIDString,
 }
 
 export interface CommentContent {

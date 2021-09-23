@@ -29,7 +29,13 @@ contract Forum {
     int256 total;
   }
 
+  struct Karma {
+    int256 post;
+    int256 comment;
+  }
+
   mapping(uint256 => VoteCount) private votes;
+  mapping(address => Karma) private authorKarma;
   mapping(uint256 => Post) private posts;
   mapping(uint256 => Comment) private comments;
   mapping(uint256 => uint256[]) private postComments;
@@ -60,7 +66,7 @@ contract Forum {
 
   function addComment(uint256 postId, string memory contentUri) public {
     require(posts[postId].id == postId, "Post does not exist");
-    
+
     ids.increment();
     uint256 id = ids.current();
     address author = msg.sender;
@@ -92,6 +98,11 @@ contract Forum {
     if (oldVote != voteValue) {
       votes[postId].votes[voterId] = voteValue;
       votes[postId].total = votes[postId].total - oldVote + voteValue;
+
+      address author = posts[postId].author;
+      if (author != msg.sender) {
+        authorKarma[author].post = authorKarma[author].post - oldVote + voteValue;
+      }
     }
   }
 
@@ -104,11 +115,24 @@ contract Forum {
     if (oldVote != voteValue) {
       votes[commentId].votes[voterId] = voteValue;
       votes[commentId].total = votes[commentId].total - oldVote + voteValue;
+
+      address author = comments[commentId].author;
+      if (author != msg.sender) {
+        authorKarma[author].comment = authorKarma[author].comment - oldVote + voteValue;
+      }
     }
   }
 
   function getVotes(uint256 postOrCommentId) public view returns (int256) {
     return votes[postOrCommentId].total;
+  }
+
+  function getPostKarma(address author) public view returns (int256) {
+    return authorKarma[author].post;
+  }
+
+  function getCommentKarma(address author) public view returns (int256) {
+    return authorKarma[author].comment;
   }
 
   function _voterId(address voter) internal pure returns (bytes32) {
