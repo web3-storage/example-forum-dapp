@@ -53,9 +53,6 @@ export default class Forum {
     const postStruct = await this.#contract.getPost(postId)
     const { contentCID, author } = postStruct
     const id = postStruct.id.toString()
-    if (id === '0') {
-      throw new Error(`No post found with id ${postId}`)
-    }
 
     // use the CID to fetch the post content
     const postObject = await this.#getJson(contentCID)
@@ -92,9 +89,6 @@ export default class Forum {
     const commentStruct = await this.#contract.getComment(commentId)
     const { contentCID, author } = commentStruct
     const id = commentStruct.id.toString()
-    if (id === '0') {
-      throw new Error(`No comment found with id ${commentId}`)
-    }
     
     // use contentCID to fetch comment content
     const content = await this.#getJson(contentCID) as CommentContent // TODO: validate

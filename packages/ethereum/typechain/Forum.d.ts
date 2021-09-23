@@ -164,7 +164,7 @@ export class Forum extends BaseContract {
   functions: {
     addComment(
       postId: BigNumberish,
-      contentUri: string,
+      contentCID: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
@@ -244,7 +244,7 @@ export class Forum extends BaseContract {
 
   addComment(
     postId: BigNumberish,
-    contentUri: string,
+    contentCID: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
@@ -315,7 +315,7 @@ export class Forum extends BaseContract {
   callStatic: {
     addComment(
       postId: BigNumberish,
-      contentUri: string,
+      contentCID: string,
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -414,7 +414,7 @@ export class Forum extends BaseContract {
   estimateGas: {
     addComment(
       postId: BigNumberish,
-      contentUri: string,
+      contentCID: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
@@ -466,7 +466,7 @@ export class Forum extends BaseContract {
   populateTransaction: {
     addComment(
       postId: BigNumberish,
-      contentUri: string,
+      contentCID: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 

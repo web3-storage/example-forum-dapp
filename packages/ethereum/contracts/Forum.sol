@@ -104,22 +104,35 @@ contract Forum {
     *      If the post does not exist, the returned Post will have empty values for all fields.
     */
   function getPost(uint256 postId) public view returns (Post memory) {
+    require(posts[postId].id == postId, "No post found");
     return posts[postId];
   }
 
-  function addComment(uint256 postId, string memory contentUri) public {
+  /** 
+    * @notice Adds a comment to a post.
+    * @dev will revert if post does not exist.
+    * @param postId the id of an existing post
+    * @param contentCID IPFS CID of comment content object
+    */
+  function addComment(uint256 postId, string memory contentCID) public {
     require(posts[postId].id == postId, "Post does not exist");
 
     ids.increment();
     uint256 id = ids.current();
     address author = msg.sender;
 
-    comments[id] = Comment(id, author, postId, contentUri);
+    comments[id] = Comment(id, author, postId, contentCID);
     postComments[postId].push() = id;
     emit NewComment(id, author, postId);
   }
 
+  /**
+    * @notice Fetch a comment by id.
+    * @dev Will always return a Comment struct, even if no comment exists with the given id.
+    *      If no comment exists, all fields will be 
+    */
   function getComment(uint256 commentId) public view returns (Comment memory) {
+    require(comments[commentId].id == commentId, "No comment found");
     return comments[commentId];
   }
 
