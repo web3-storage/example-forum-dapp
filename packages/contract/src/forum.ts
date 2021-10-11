@@ -1,4 +1,4 @@
-import { File, Blob } from 'web3.storage'
+import { File } from 'web3.storage'
 import type { Web3Storage } from 'web3.storage'
 import type { Forum as ForumContract } from '../typechain/Forum'
 import type { Event, BigNumber } from 'ethers'
