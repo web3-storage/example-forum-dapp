@@ -1,23 +1,22 @@
-import { ethers, waffle } from 'hardhat'
-import chai from 'chai'
+import { describe, it, beforeEach } from 'mocha'
+import { MockProvider, deployContract, loadFixture, solidity } from 'ethereum-waffle'
+import chai, { expect } from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import sinon from 'sinon'
 
 import { Web3Storage, File } from 'web3.storage'
 import type { Web3Response } from 'web3.storage'
 
-const { deployContract, loadFixture } = waffle
-const { expect } = chai
+chai.use(solidity)
 chai.use(chaiAsPromised)
 
 
-import Forum from '../src/forum'
-import type { Forum as ForumContract } from '../typechain/Forum'
-import ForumArtifact from '../artifacts/contracts/Forum.sol/Forum.json'
+import { ForumAPI as Forum, Upvote, Downvote, NoVote, VoteValue, Address } from '../src/api/forum'
+import type { ForumContract } from '../src/api/forum'
+import ForumArtifact from '../../contract/artifacts/contracts/Forum.sol/Forum.json'
 
-import { Upvote, Downvote, NoVote, VoteValue, Address } from '../src/types'
 
-describe("Forum", function () {
+describe("ForumAPI", function () {
   let mainAccount: Address
   let otherAccount: Address
   let forum: Forum
@@ -45,7 +44,8 @@ describe("Forum", function () {
   }
 
   async function fixture() {
-    const signers = await ethers.getSigners()
+    const provider = new MockProvider()
+    const signers = provider.getWallets()
     const contract = (await deployContract(signers[0], ForumArtifact)) as ForumContract
     mainAccount = signers[0].address
     otherAccount = signers[1].address
@@ -270,7 +270,7 @@ describe("Forum", function () {
       stubStoragePut(cid)
 
       const postId = await forum.addPost(postObj)
-      expect(forum.voteForPost(postId, 123 as VoteValue)).to.be.revertedWith('Invalid vote value')
+      expect(forum.voteForPost(postId, 123 as VoteValue)).to.be.rejectedWith('Invalid vote value')
     })
   })
 })

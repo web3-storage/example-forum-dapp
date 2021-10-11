@@ -1,26 +1,20 @@
+import type { BigNumberish } from 'ethers'
+
 import { File } from 'web3.storage'
 import type { Web3Storage } from 'web3.storage'
-import type { Forum as ForumContract } from '../typechain/Forum'
 import type { Event, BigNumber } from 'ethers'
-
-import type { Post, PostContent, PostId, Comment, CommentContent, CommentId, VoteValue, CIDString, Attachment, AttachmentRef } from './types'
-
-export interface ForumOptions {
-  contract: ForumContract,
-  storage: Web3Storage,
-}
-
-export type { Forum as ForumContract } from '../typechain/Forum'
+import type { Forum as ForumContract } from '../../../contract/typechain'
+export type { Forum as ForumContract } from '../../../contract/typechain'
 
 
 /**
  * Provides a high-level API for interacting with the forum smart contract and Web3.Storage.
  */
-export default class Forum {
+export class ForumAPI {
   #contract: ForumContract
   #storage: Web3Storage
 
-  constructor(opts: ForumOptions) {
+  constructor(opts: ForumAPIOptions) {
     this.#contract = opts.contract
     this.#storage = opts.storage
   }
@@ -237,6 +231,8 @@ export default class Forum {
 }
 
 
+//#region helpers
+
 /**
  * Tries to extract the post or comment from an event containing an `id` arg.
  * 
@@ -274,3 +270,65 @@ function filesFromAttachments(attachments: Attachment[]): File[] {
   }
   return files
 }
+
+
+//#endregion helpers
+
+//#region types
+
+export interface ForumAPIOptions {
+  contract: ForumContract,
+  storage: Web3Storage,
+}
+
+export type PostId = BigNumberish
+export type CommentId = BigNumberish
+export type Address = string
+export type CIDString = string
+export type IPFSPath = string
+
+export interface Post {
+  id: PostId,
+  author: Address,
+  content: PostContent,
+  contentCID: CIDString,
+}
+
+export interface PostContent {
+  body: string,
+  attachments?: Attachment[],
+  refs?: AttachmentRef[],
+}
+
+export interface Comment {
+  id: CommentId,
+  author: Address,
+  content: CommentContent,
+  contentCID: CIDString,
+}
+
+export interface CommentContent {
+  postId: PostId,
+  body: string,
+  attachments?: Attachment[],
+  refs?: AttachmentRef[],
+}
+
+export interface Attachment {
+  name: string,
+  content: AttachmentContent,
+}
+
+export interface AttachmentRef {
+  name: string,
+  ipfsPath: IPFSPath,
+}
+
+export type AttachmentContent = Blob | File | Uint8Array | string
+
+export const Upvote = 1
+export const Downvote = -1
+export const NoVote = 0
+export type VoteValue = 1 | 0 | -1
+
+//#endregion types

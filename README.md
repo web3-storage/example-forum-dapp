@@ -38,7 +38,7 @@ To get the "post karma" or number of votes an author has recieved for their post
 
 To get the "comment karma", or number of votes an author has received for their comments, call `getCommentKarma(author)`.
 
-See [`packages/contract`](./packages/contract/README.md) for details about the smart contract and support code.
+See [`packages/contract`](./packages/contract/README.md) for details about the smart contract.
 See [`packages/webapp](./packages/webapp/README.md) for deatails about the user interface.
 
 
