@@ -1,0 +1,18 @@
+
+/* This file has global CSS variable declarations that are used by various components */
+
+:root {
+    --color-primary: #FF6600;
+    --color-header-bg: #FF6600;
+    --color-main-bg: #f6f6ef;
+    --color-main-text: #000000;
+    --color-muted-text: #828282;
+
+    --font-family: "Verdana", "Geneva", sans-serif;
+
+    --font-size-default: 13.33px;
+    --font-size-site-title: 13.333px;
+    --font-size-story-link: 13.333px;
+    --font-size-site-link: 10.666px;
+    --font-size-story-details: 9.333px;
+}

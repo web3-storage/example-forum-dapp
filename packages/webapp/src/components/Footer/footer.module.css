@@ -1,0 +1,19 @@
+@import '../../styles/vars.css';
+
+.footer {
+  background-color: var(--color-main-bg);
+  border-top: 2px var(--color-primary) solid;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: baseline;
+  padding: 20px;
+
+  font-size: 10.5px;
+}
+
+.links a {
+  color: var(--color-main-text);
+  text-decoration: none;
+}

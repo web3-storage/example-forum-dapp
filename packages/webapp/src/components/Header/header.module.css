@@ -1,0 +1,37 @@
+@import '../../styles/vars.css';
+
+.header {
+  background-color: var(--color-header-bg);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 2px;
+}
+
+.logo {
+  color: white;
+  font-size: 12px;
+  align-self: center;
+  text-align: center;
+  margin-right: 10px;
+  padding: 2px;
+  border: 1px white solid;
+}
+
+.links {
+  padding-left: 10px;
+}
+
+.links a {
+  color: var(--color-main-text);
+  text-decoration: none;
+}
+
+.siteName {
+  font-size: var(--font-size-site-title);
+  font-weight: 600;
+}
+
+.spacer {
+  flex-grow: 1;
+}

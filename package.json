@@ -4,7 +4,7 @@
   "description": "A decentralized forum example app that uses Web3.Storage",
   "main": "index.js",
   "workspaces": [
-    "packages/ethereum",
+    "packages/contract",
     "packages/webapp"
   ],
   "scripts": {
