@@ -16,10 +16,6 @@ declare module "hardhat/types/runtime" {
       name: "Forum",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Forum__factory>;
-    getContractFactory(
-      name: "Greeter",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.Greeter__factory>;
 
     // default types
     getContractFactory(

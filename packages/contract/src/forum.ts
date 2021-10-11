@@ -5,10 +5,13 @@ import type { Event, BigNumber } from 'ethers'
 
 import type { Post, PostContent, PostId, Comment, CommentContent, CommentId, VoteValue, CIDString, Attachment, AttachmentRef } from './types'
 
-interface ForumOptions {
+export interface ForumOptions {
   contract: ForumContract,
   storage: Web3Storage,
 }
+
+export type { Forum as ForumContract } from '../typechain/Forum'
+
 
 /**
  * Provides a high-level API for interacting with the forum smart contract and Web3.Storage.
@@ -100,8 +103,8 @@ export default class Forum {
    * Note that this method _does not_ validate that the post exists. 
    * Non-existant posts will return an empty array.
    * 
-   * @param postId the unique id of a post.
-   * @returns an array of Comment objects.
+   * @param postId - the unique id of a post
+   * @returns - an array of Comment objects
    */
   async getCommentsForPost(postId: PostId): Promise<Comment[]> {
     const commentStructs = await this.#contract.getPostComments(postId)
@@ -112,20 +115,46 @@ export default class Forum {
     return Promise.all(promises)
   }
 
+  /**
+   * Applies the given vote to a post.
+   * 
+   * @param postId - the unique id of a post
+   * @param vote - an upvote, downvote, or retraction
+   */
   async voteForPost(postId: PostId, vote: VoteValue): Promise<void> {
     const tx = await this.#contract.voteForPost(postId, vote)
     await tx.wait()
   }
 
+  /**
+   * Applies the given vote to a comment.
+   * 
+   * @param commentId - the unique id of a comment
+   * @param vote - an upvote, downvote, or retraction
+   */
   async voteForComment(commentId: CommentId, vote: VoteValue): Promise<void> {
     const tx = await this.#contract.voteForComment(commentId, vote)
     await tx.wait()
   }
 
+  /**
+   * Get the total number of votes for a post or comment. May be negative.
+   * @param postOrCommentId - unique id of post or comment
+   * @returns - the total number of votes for the given post or comment, as an ethers BigNumber
+   */
   async getVotes(postOrCommentId: PostId | CommentId): Promise<BigNumber> {
     return this.#contract.getVotes(postOrCommentId)
   }
 
+  /**
+   * Stores a PostContent object as JSON with web3.storage.
+   * 
+   * If the PostContent has any Attachments, these will be stored first
+   * and replaced with AttachmentRefs in the stored PostContent JSON.
+   * 
+   * @param p - a PostContent object
+   * @returns - a promise that resoves to the CID of the content, encoded as a string
+   */
   async #storePostContent(p: PostContent): Promise<CIDString> {
     const existingRefs = p.refs || []
     const attachmentRefs = await this.#storeAttachments(p.attachments) || []
@@ -134,6 +163,15 @@ export default class Forum {
     return this.#storeAsJson(p)
   }
 
+  /**
+   * Stores a CommentContent object as JSON with web3.storage.
+   * 
+   * If the CommentContent has any Attachments, these will be stored first
+   * and replaced with AttachmentRefs in the stored CommentContent JSON.
+   * 
+   * @param p - a CommentContent object
+   * @returns - a promise that resoves to the CID of the content, encoded as a string
+   */
   async #storeCommentContent(c: CommentContent): Promise<CIDString> {
     const existingRefs = c.refs || []
     const attachmentRefs = await this.#storeAttachments(c.attachments) || []
@@ -142,6 +180,13 @@ export default class Forum {
     return this.#storeAsJson(c)
   }
 
+  /**
+   * Stores Attachment objects with Web3.Storage and returns AttachmentRefs that link to them
+   * by IPFS path.
+   * 
+   * @param attachments - an array of Attachment objects
+   * @returns - a promise that resolves to an array of AttachmentRef objects, or undefined if the input was undefined
+   */
   async #storeAttachments(attachments: Attachment[]|undefined): Promise<AttachmentRef[]|undefined> {
     if (!attachments) {
       return
@@ -156,12 +201,27 @@ export default class Forum {
     return refs
   }
 
+  /**
+   * Stores the given value as a JSON file with web3.storage.
+   * 
+   * @param o - any JS value that can be converted to JSON
+   * @param filename - optional filename. Ignored if wrapWithDirectory == false.
+   * @param wrapWithDirectory - if true, wraps content with an IPFS directory listing. Defaults to false.
+   * @returns - a promise that resoves to the CID of the JSON file, encoded as a string. 
+   * If wrapWithDirectory == true, the CID will be of the directory root, and the file is accessible at `${cid}/${filename}`
+   */
   async #storeAsJson(o: any, filename: string = 'file.json', wrapWithDirectory: boolean = false): Promise<CIDString> {
     const str = JSON.stringify(o)
     const file = new File([str], filename, { type: 'application/json' })
     return this.#storage.put([file], { wrapWithDirectory })
   }
 
+  /**
+   * Fetches a JSON file from web3.storage and parses it.
+   * 
+   * @param cid - CID of JSON file object to fetch
+   * @returns - a promise that resolves to the parsed JSON object
+   */
   async #getJson(cid: string): Promise<any> {
     const res = await this.#storage.get(cid)
     if (!res || !res.ok) {
@@ -176,6 +236,14 @@ export default class Forum {
   }
 }
 
+
+/**
+ * Tries to extract the post or comment from an event containing an `id` arg.
+ * 
+ * @param targetEvent - the name of the event containing the id. Should be one of 'NewPost` or 'NewComment'.
+ * @param events - an array of ethers `Event`s to search.
+ * @returns the value of `id` from the first event with the given name, or undefined if no matching event was found
+ */
 function idFromEvents(targetEvent: string, events: Event[] | undefined): PostId | CommentId | undefined {
   if (!events) {
     return
@@ -194,6 +262,11 @@ function idFromEvents(targetEvent: string, events: Event[] | undefined): PostId 
   return id
 }
 
+/**
+ * Helper to convert attachments to File objects.
+ * @param attachments an array of Attachment objects
+ * @returns an Array of File objects
+ */
 function filesFromAttachments(attachments: Attachment[]): File[] {
   const files = []
   for (const a of attachments) {

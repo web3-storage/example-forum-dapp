@@ -4,6 +4,7 @@
   "description": "Smart contracts for Web3.Storage example forum dApp",
   "main": "index.js",
   "scripts": {
+    "compile": "hardhat compile",
     "test": "hardhat test"
   },
   "author": "",

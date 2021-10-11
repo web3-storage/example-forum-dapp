@@ -2,7 +2,5 @@
 /* tslint:disable */
 /* eslint-disable */
 export type { Forum } from "./Forum";
-export type { Greeter } from "./Greeter";
 
 export { Forum__factory } from "./factories/Forum__factory";
-export { Greeter__factory } from "./factories/Greeter__factory";
