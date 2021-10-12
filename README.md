@@ -8,7 +8,7 @@ The app consists of a smart contract and supporting TypeScript code for interact
 
 At a high level, the app works like this:
 
-A [`Forum` smart contract][src-forum-sol] is deployed to an Ethereum network
+A [`Forum` smart contract][src-forum-sol] is deployed to an Ethereum network, which allows creating posts, commenting on them, and voting on posts and comments.
 
 ### Posts
 
