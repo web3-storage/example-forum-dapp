@@ -54,8 +54,11 @@ contract Forum {
     int256 comment;
   }
 
-  /// @dev counter for issuing post and comment ids.
-  Counters.Counter private ids;
+  /// @dev counter for issuing post ids
+  Counters.Counter private postIdCounter;
+  
+  /// @dev counter for issuing comment ids
+  Counters.Counter private commentIdCounter;
 
   /// @dev maps post or comment id to vote state
   mapping(uint256 => VoteCount) private votes;
@@ -69,7 +72,7 @@ contract Forum {
   /// @dev maps comment id to comments
   mapping(uint256 => Comment) private comments;
 
-  /// @dev maps post id to comment ids attached to post
+  /// @dev maps post id to comment ids attached to post. Most recent comments are at end of array.
   mapping(uint256 => uint256[]) private postComments;
 
   /// @notice NewPost events are emitted when a post is created.
@@ -85,13 +88,15 @@ contract Forum {
     uint indexed postId
   );
 
+  /// @notice 
+
   /**
     * @notice Create a new post.
     * @param contentCID IPFS CID of post content object.
    */
   function addPost(string memory contentCID) public {
-    ids.increment();
-    uint256 id = ids.current();
+    postIds.increment();
+    uint256 id = postIds.current();
     address author = msg.sender;
 
     posts[id] = Post(id, author, contentCID);
@@ -117,8 +122,8 @@ contract Forum {
   function addComment(uint256 postId, string memory contentCID) public {
     require(posts[postId].id == postId, "Post does not exist");
 
-    ids.increment();
-    uint256 id = ids.current();
+    commentIds.increment();
+    uint256 id = commentIds.current();
     address author = msg.sender;
 
     comments[id] = Comment(id, author, postId, contentCID);
@@ -140,6 +145,28 @@ contract Forum {
     Comment[] memory out = new Comment[](postComments[postId].length);
     for (uint i = 0; i < out.length; i++) {
       uint commentId = postComments[postId][i];
+      out[i] = comments[commentId];
+    }
+    return out;
+  }
+
+  function getNumberOfComments(uint256 postId) public view returns (uint) {
+    return postComments[postId].length;
+  }
+
+  function getPostCommentsPaged(uint256 postId, uint256 offset, uint256 limit) public view returns (Comment[] memory){
+    if (offset >= postComments[postId].length) {
+      Comment[] memory empty = new Comment[];
+      return empty;
+    }
+
+    Comment[] memory out = new Comment[](limit);
+    for (uint i = 0; i < out.length; i++) {
+      if (i + offset >= postComments[postId].length) {
+        break;
+      }
+
+      uint commentId = postComments[postId][i+offset];
       out[i] = comments[commentId];
     }
     return out;
