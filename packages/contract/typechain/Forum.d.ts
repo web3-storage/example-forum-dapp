@@ -25,9 +25,12 @@ interface ForumInterface extends ethers.utils.Interface {
     "addPost(string)": FunctionFragment;
     "getComment(uint256)": FunctionFragment;
     "getCommentKarma(address)": FunctionFragment;
+    "getNumberOfComments(uint256)": FunctionFragment;
     "getPost(uint256)": FunctionFragment;
     "getPostComments(uint256)": FunctionFragment;
+    "getPostCommentsPaged(uint256,uint256,uint256)": FunctionFragment;
     "getPostKarma(address)": FunctionFragment;
+    "getRecentPosts(uint8)": FunctionFragment;
     "getVotes(uint256)": FunctionFragment;
     "voteForComment(uint256,int8)": FunctionFragment;
     "voteForPost(uint256,int8)": FunctionFragment;
@@ -47,6 +50,10 @@ interface ForumInterface extends ethers.utils.Interface {
     values: [string]
   ): string;
   encodeFunctionData(
+    functionFragment: "getNumberOfComments",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "getPost",
     values: [BigNumberish]
   ): string;
@@ -55,8 +62,16 @@ interface ForumInterface extends ethers.utils.Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
+    functionFragment: "getPostCommentsPaged",
+    values: [BigNumberish, BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "getPostKarma",
     values: [string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getRecentPosts",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "getVotes",
@@ -78,13 +93,25 @@ interface ForumInterface extends ethers.utils.Interface {
     functionFragment: "getCommentKarma",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "getNumberOfComments",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "getPost", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "getPostComments",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "getPostCommentsPaged",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "getPostKarma",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getRecentPosts",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "getVotes", data: BytesLike): Result;
@@ -178,11 +205,12 @@ export class Forum extends BaseContract {
       overrides?: CallOverrides
     ): Promise<
       [
-        [BigNumber, string, BigNumber, string] & {
+        [BigNumber, string, BigNumber, string, BigNumber] & {
           id: BigNumber;
           author: string;
           postId: BigNumber;
           contentCID: string;
+          createdAtBlock: BigNumber;
         }
       ]
     >;
@@ -192,15 +220,21 @@ export class Forum extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
 
+    getNumberOfComments(
+      postId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>;
+
     getPost(
       postId: BigNumberish,
       overrides?: CallOverrides
     ): Promise<
       [
-        [BigNumber, string, string] & {
+        [BigNumber, string, string, BigNumber] & {
           id: BigNumber;
           author: string;
           contentCID: string;
+          createdAtBlock: BigNumber;
         }
       ]
     >;
@@ -210,11 +244,29 @@ export class Forum extends BaseContract {
       overrides?: CallOverrides
     ): Promise<
       [
-        ([BigNumber, string, BigNumber, string] & {
+        ([BigNumber, string, BigNumber, string, BigNumber] & {
           id: BigNumber;
           author: string;
           postId: BigNumber;
           contentCID: string;
+          createdAtBlock: BigNumber;
+        })[]
+      ]
+    >;
+
+    getPostCommentsPaged(
+      postId: BigNumberish,
+      offset: BigNumberish,
+      limit: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<
+      [
+        ([BigNumber, string, BigNumber, string, BigNumber] & {
+          id: BigNumber;
+          author: string;
+          postId: BigNumber;
+          contentCID: string;
+          createdAtBlock: BigNumber;
         })[]
       ]
     >;
@@ -223,6 +275,20 @@ export class Forum extends BaseContract {
       author: string,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
+
+    getRecentPosts(
+      limit: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<
+      [
+        ([BigNumber, string, string, BigNumber] & {
+          id: BigNumber;
+          author: string;
+          contentCID: string;
+          createdAtBlock: BigNumber;
+        })[]
+      ]
+    >;
 
     getVotes(
       postOrCommentId: BigNumberish,
@@ -257,11 +323,12 @@ export class Forum extends BaseContract {
     commentId: BigNumberish,
     overrides?: CallOverrides
   ): Promise<
-    [BigNumber, string, BigNumber, string] & {
+    [BigNumber, string, BigNumber, string, BigNumber] & {
       id: BigNumber;
       author: string;
       postId: BigNumber;
       contentCID: string;
+      createdAtBlock: BigNumber;
     }
   >;
 
@@ -270,14 +337,20 @@ export class Forum extends BaseContract {
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
+  getNumberOfComments(
+    postId: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
+
   getPost(
     postId: BigNumberish,
     overrides?: CallOverrides
   ): Promise<
-    [BigNumber, string, string] & {
+    [BigNumber, string, string, BigNumber] & {
       id: BigNumber;
       author: string;
       contentCID: string;
+      createdAtBlock: BigNumber;
     }
   >;
 
@@ -285,15 +358,43 @@ export class Forum extends BaseContract {
     postId: BigNumberish,
     overrides?: CallOverrides
   ): Promise<
-    ([BigNumber, string, BigNumber, string] & {
+    ([BigNumber, string, BigNumber, string, BigNumber] & {
       id: BigNumber;
       author: string;
       postId: BigNumber;
       contentCID: string;
+      createdAtBlock: BigNumber;
+    })[]
+  >;
+
+  getPostCommentsPaged(
+    postId: BigNumberish,
+    offset: BigNumberish,
+    limit: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<
+    ([BigNumber, string, BigNumber, string, BigNumber] & {
+      id: BigNumber;
+      author: string;
+      postId: BigNumber;
+      contentCID: string;
+      createdAtBlock: BigNumber;
     })[]
   >;
 
   getPostKarma(author: string, overrides?: CallOverrides): Promise<BigNumber>;
+
+  getRecentPosts(
+    limit: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<
+    ([BigNumber, string, string, BigNumber] & {
+      id: BigNumber;
+      author: string;
+      contentCID: string;
+      createdAtBlock: BigNumber;
+    })[]
+  >;
 
   getVotes(
     postOrCommentId: BigNumberish,
@@ -325,11 +426,12 @@ export class Forum extends BaseContract {
       commentId: BigNumberish,
       overrides?: CallOverrides
     ): Promise<
-      [BigNumber, string, BigNumber, string] & {
+      [BigNumber, string, BigNumber, string, BigNumber] & {
         id: BigNumber;
         author: string;
         postId: BigNumber;
         contentCID: string;
+        createdAtBlock: BigNumber;
       }
     >;
 
@@ -338,14 +440,20 @@ export class Forum extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    getNumberOfComments(
+      postId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     getPost(
       postId: BigNumberish,
       overrides?: CallOverrides
     ): Promise<
-      [BigNumber, string, string] & {
+      [BigNumber, string, string, BigNumber] & {
         id: BigNumber;
         author: string;
         contentCID: string;
+        createdAtBlock: BigNumber;
       }
     >;
 
@@ -353,15 +461,43 @@ export class Forum extends BaseContract {
       postId: BigNumberish,
       overrides?: CallOverrides
     ): Promise<
-      ([BigNumber, string, BigNumber, string] & {
+      ([BigNumber, string, BigNumber, string, BigNumber] & {
         id: BigNumber;
         author: string;
         postId: BigNumber;
         contentCID: string;
+        createdAtBlock: BigNumber;
+      })[]
+    >;
+
+    getPostCommentsPaged(
+      postId: BigNumberish,
+      offset: BigNumberish,
+      limit: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<
+      ([BigNumber, string, BigNumber, string, BigNumber] & {
+        id: BigNumber;
+        author: string;
+        postId: BigNumber;
+        contentCID: string;
+        createdAtBlock: BigNumber;
       })[]
     >;
 
     getPostKarma(author: string, overrides?: CallOverrides): Promise<BigNumber>;
+
+    getRecentPosts(
+      limit: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<
+      ([BigNumber, string, string, BigNumber] & {
+        id: BigNumber;
+        author: string;
+        contentCID: string;
+        createdAtBlock: BigNumber;
+      })[]
+    >;
 
     getVotes(
       postOrCommentId: BigNumberish,
@@ -433,6 +569,11 @@ export class Forum extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    getNumberOfComments(
+      postId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     getPost(
       postId: BigNumberish,
       overrides?: CallOverrides
@@ -443,7 +584,19 @@ export class Forum extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    getPostCommentsPaged(
+      postId: BigNumberish,
+      offset: BigNumberish,
+      limit: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     getPostKarma(author: string, overrides?: CallOverrides): Promise<BigNumber>;
+
+    getRecentPosts(
+      limit: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
 
     getVotes(
       postOrCommentId: BigNumberish,
@@ -485,6 +638,11 @@ export class Forum extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
+    getNumberOfComments(
+      postId: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     getPost(
       postId: BigNumberish,
       overrides?: CallOverrides
@@ -495,8 +653,20 @@ export class Forum extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
+    getPostCommentsPaged(
+      postId: BigNumberish,
+      offset: BigNumberish,
+      limit: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     getPostKarma(
       author: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getRecentPosts(
+      limit: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 

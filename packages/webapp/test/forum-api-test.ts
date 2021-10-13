@@ -79,6 +79,26 @@ describe("ForumAPI", function () {
       expect(post.content.refs).to.be.empty
     })
 
+    it("Should return recent posts in reverse chronological order", async () => {
+      const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
+      const postObj = { body: "This is an amazing post!" }
+      stubStoragePut(cid)
+      stubGetFile(JSON.stringify(postObj))
+
+
+      const total = 10
+      const limit = 5
+      let lastId
+
+      for (let i = 0; i < total; i++) {
+        lastId = await forum.addPost(postObj)
+      }
+
+      const recent = await forum.getRecentPosts(limit)
+      expect(recent.length).to.equal(limit)
+      expect(recent[0].id).to.equal(lastId)
+    })
+
     it("Should store attachments to a post", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
       const postObj = { 

@@ -46,9 +46,22 @@ export class ForumAPI {
    * @throws if no post exists with the given ID, or if the post content fails to load
    */
   async getPost(postId: PostId): Promise<Post> {
-    // Get the post information from the contract
     const postStruct = await this.#contract.getPost(postId)
+    return this.#hydratePost(postStruct)
+  }
+
+
+  async getRecentPosts(limit: number = 20): Promise<Post[]> {
+    const postStructs = await this.#contract.getRecentPosts(limit)
+    const promises = postStructs.map(p => this.#hydratePost(p))
+    return Promise.all(promises)
+  }
+
+  async #hydratePost(postStruct: PostStruct): Promise<Post> {
     const { contentCID, author } = postStruct
+    if (!contentCID) {
+      throw new Error(`post struct has no content cid`)
+    }
     const id = postStruct.id.toString()
 
     // use the CID to fetch the post content
@@ -84,12 +97,7 @@ export class ForumAPI {
   async getComment(commentId: CommentId): Promise<Comment> {
     // Get comment info from the contract
     const commentStruct = await this.#contract.getComment(commentId)
-    const { contentCID, author } = commentStruct
-    const id = commentStruct.id.toString()
-    
-    // use contentCID to fetch comment content
-    const content = await this.#getJson(contentCID) as CommentContent // TODO: validate
-    return { content, contentCID, author, id }
+    return this.#hydrateComment(commentStruct)
   }
 
   /**
@@ -104,9 +112,18 @@ export class ForumAPI {
     const commentStructs = await this.#contract.getPostComments(postId)
     const promises = []
     for (const c of commentStructs) {
-      promises.push(this.getComment(c.id.toString()))
+      promises.push(this.#hydrateComment(c))
     }
     return Promise.all(promises)
+  }
+
+  async #hydrateComment(commentStruct: CommentStruct): Promise<Comment> {
+    const { contentCID, author } = commentStruct
+    const id = commentStruct.id.toString()
+    
+    // use contentCID to fetch comment content
+    const content = await this.#getJson(contentCID) as CommentContent // TODO: validate
+    return { content, contentCID, author, id }
   }
 
   /**
@@ -330,5 +347,23 @@ export const Upvote = 1
 export const Downvote = -1
 export const NoVote = 0
 export type VoteValue = 1 | 0 | -1
+
+
+/// the types below are for struct types defined in the contract
+
+type PostStruct = {
+  id: BigNumber;
+  author: string;
+  contentCID: string;
+  createdAtBlock: BigNumber;
+}
+
+type CommentStruct = {
+  id: BigNumber;
+  author: string;
+  postId: BigNumber;
+  contentCID: string;
+  createdAtBlock: BigNumber;
+}
 
 //#endregion types

@@ -19,6 +19,9 @@ contract Forum {
 
     /// @notice IPFS CID of post content.
     string contentCID;
+
+    /// @notice block number when post was submitted
+    uint256 createdAtBlock;
   }
 
   /// @notice Represents a comment attached to a forum post.
@@ -34,6 +37,9 @@ contract Forum {
 
     /// @notice IPFS CID of comment content.
     string contentCID;
+
+    /// @notice block number when comment was submitted
+    uint256 createdAtBlock;
   }
 
   /// @notice Vote state for a particular post or comment.
@@ -55,10 +61,10 @@ contract Forum {
   }
 
   /// @dev counter for issuing post ids
-  Counters.Counter private postIdCounter;
+  Counters.Counter private postIds;
   
   /// @dev counter for issuing comment ids
-  Counters.Counter private commentIdCounter;
+  Counters.Counter private commentIds;
 
   /// @dev maps post or comment id to vote state
   mapping(uint256 => VoteCount) private votes;
@@ -85,10 +91,8 @@ contract Forum {
   event NewComment(
     uint256 indexed id,
     address indexed author,
-    uint indexed postId
+    uint256 indexed postId
   );
-
-  /// @notice 
 
   /**
     * @notice Create a new post.
@@ -99,18 +103,34 @@ contract Forum {
     uint256 id = postIds.current();
     address author = msg.sender;
 
-    posts[id] = Post(id, author, contentCID);
+    posts[id] = Post(id, author, contentCID, block.number);
     emit NewPost(id, author);
   }
 
   /**
     * @notice Fetch a post by id.
-    * @dev Will always return a Post object, even if no post exists with the given id! 
-    *      If the post does not exist, the returned Post will have empty values for all fields.
+    * @dev reverts if no post exists with the given id.
     */
   function getPost(uint256 postId) public view returns (Post memory) {
     require(posts[postId].id == postId, "No post found");
     return posts[postId];
+  }
+
+  /**
+   * @notice Return up to `limit` posts, in reverse chronological order.
+   * @dev The returned array may have fewer than `limit` items if there aren't many posts.
+   */
+  function getRecentPosts(uint8 limit) public view returns (Post[] memory) {
+    uint maxId = postIds.current();
+    if (limit > maxId) {
+      limit = uint8(maxId);
+    }
+    Post[] memory out = new Post[](limit);
+    for (uint8 i = 0; i < limit; i++) {
+      uint postId = maxId - i;
+      out[i] = posts[postId];
+    }
+    return out;
   }
 
   /** 
@@ -126,15 +146,14 @@ contract Forum {
     uint256 id = commentIds.current();
     address author = msg.sender;
 
-    comments[id] = Comment(id, author, postId, contentCID);
+    comments[id] = Comment(id, author, postId, contentCID, block.number);
     postComments[postId].push() = id;
     emit NewComment(id, author, postId);
   }
 
   /**
     * @notice Fetch a comment by id.
-    * @dev Will always return a Comment struct, even if no comment exists with the given id.
-    *      If no comment exists, all fields will be 
+    * @dev Reverts if no comment exists with the given id.
     */
   function getComment(uint256 commentId) public view returns (Comment memory) {
     require(comments[commentId].id == commentId, "No comment found");
@@ -156,7 +175,7 @@ contract Forum {
 
   function getPostCommentsPaged(uint256 postId, uint256 offset, uint256 limit) public view returns (Comment[] memory){
     if (offset >= postComments[postId].length) {
-      Comment[] memory empty = new Comment[];
+      Comment[] memory empty = new Comment[](0);
       return empty;
     }
 
