@@ -5,7 +5,7 @@ import { useChainContext } from './context'
 
 export function useReadonlyConnection() {
     const { readonly } = useChainContext()
-    const { activate, active } = readonly
+    const { activate } = readonly
 
     useEffect(() => {
         activate(networkReadonly, undefined, true).then(() => {

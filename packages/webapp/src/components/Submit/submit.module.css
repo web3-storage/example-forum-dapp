@@ -1,0 +1,33 @@
+
+.submitForm {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.inputGroup {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    margin: 10px;
+}
+
+label {
+    color: #828282;
+    min-width: 30px;
+    padding-right: 20px;
+}
+
+input {
+    min-width: 400px;
+}
+
+textarea {
+    min-width: 400px;
+    min-height: 80px;
+}
+
+button {
+    margin-left: 60px;
+}

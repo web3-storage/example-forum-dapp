@@ -9,6 +9,9 @@ import { createWeb3ReactRoot, useWeb3React, Web3ReactProvider } from '@web3-reac
 interface ChainContextInterface {
     readonly: Web3ReactContextInterface<Web3Provider>,
     authorized: Web3ReactContextInterface<Web3Provider>,
+
+    loggedIn: boolean,
+    account: string | null | undefined,
 }
 
 const inactiveContext: Web3ReactContextInterface<Web3Provider> = {
@@ -24,6 +27,8 @@ const inactiveContext: Web3ReactContextInterface<Web3Provider> = {
 export const ChainContext = React.createContext<ChainContextInterface>({
     readonly: inactiveContext,
     authorized: inactiveContext,
+    loggedIn: false,
+    account: undefined,
 })
 
 function getLibrary(provider: any) {
@@ -47,7 +52,10 @@ function ContextWrapper(props: { children: React.ReactNode }) {
 function Provider(props: { children: React.ReactNode }) {
     const authorized = useWeb3React()
     const readonly = useWeb3React('readonly')
-    const context = { authorized, readonly }
+
+    const account = authorized.account
+    const loggedIn = authorized.active && !!account
+    const context = { authorized, readonly, loggedIn, account }
 
     return (
         <ChainContext.Provider value={context} >

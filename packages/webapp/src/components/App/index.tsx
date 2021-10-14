@@ -9,6 +9,7 @@ import Login from '../Login'
 import Home from '../Home'
 import { ChainContextProvider } from '../../chain/context';
 import { useEagerConnect, useReadonlyConnection } from "../../chain/hooks";
+import Submit from "../Submit";
 
 
 function Routes() {
@@ -21,6 +22,9 @@ function Routes() {
     </Route>
     <Route path='/login'>
       <Login />
+    </Route>
+    <Route path='/submit'>
+      <Submit />
     </Route>
   </Switch>
 }
