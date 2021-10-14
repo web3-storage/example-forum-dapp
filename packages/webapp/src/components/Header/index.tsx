@@ -25,6 +25,8 @@ const Account = () => {
             )}`
           : ''}
       </span>
+      <span> | </span>
+      <Link to='/logout'>logout</Link>
     </>
   )
 }

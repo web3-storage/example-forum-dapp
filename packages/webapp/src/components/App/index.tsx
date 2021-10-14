@@ -6,10 +6,12 @@ import {
 
 import styles from './app.module.css'
 import Login from '../Login'
+import Logout from '../Logout'
 import Home from '../Home'
 import { ChainContextProvider } from '../../chain/context';
-import { useEagerConnect, useReadonlyConnection } from "../../chain/hooks";
+import { useAutoFaucet, useEagerConnect, useReadonlyConnection } from "../../chain/hooks";
 import Submit from "../Submit";
+import { ApiContextProvider } from "../../api/context";
 
 
 function Routes() {
@@ -26,12 +28,16 @@ function Routes() {
     <Route path='/submit'>
       <Submit />
     </Route>
+    <Route path='/logout'>
+      <Logout />
+    </Route>
   </Switch>
 }
 
 function App() {
   useReadonlyConnection()
   useEagerConnect()
+  useAutoFaucet()
 
   return (
     <Router>
@@ -45,7 +51,9 @@ function App() {
 export default function () {
   return (
     <ChainContextProvider>
-      <App />
+      <ApiContextProvider>
+        <App />
+      </ApiContextProvider>
     </ChainContextProvider>
   )
 }

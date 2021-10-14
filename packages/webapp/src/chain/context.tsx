@@ -1,10 +1,12 @@
 
-import * as React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Web3Provider } from "@ethersproject/providers"
 import { Web3ReactContextInterface } from '@web3-react/core/dist/types'
 import type { AbstractConnector } from '@web3-react/abstract-connector'
 import { createWeb3ReactRoot, useWeb3React, Web3ReactProvider } from '@web3-react/core'
 
+import type { ForumContract } from '../api/forum'
+import { connectToForumContract } from './contract'
 
 interface ChainContextInterface {
     readonly: Web3ReactContextInterface<Web3Provider>,
@@ -12,6 +14,9 @@ interface ChainContextInterface {
 
     loggedIn: boolean,
     account: string | null | undefined,
+
+    readonlyContract: ForumContract | undefined,
+    authorizedContract: ForumContract | undefined,
 }
 
 const inactiveContext: Web3ReactContextInterface<Web3Provider> = {
@@ -29,6 +34,8 @@ export const ChainContext = React.createContext<ChainContextInterface>({
     authorized: inactiveContext,
     loggedIn: false,
     account: undefined,
+    readonlyContract: undefined,
+    authorizedContract: undefined,
 })
 
 function getLibrary(provider: any) {
@@ -55,7 +62,32 @@ function Provider(props: { children: React.ReactNode }) {
 
     const account = authorized.account
     const loggedIn = authorized.active && !!account
-    const context = { authorized, readonly, loggedIn, account }
+    
+    const [readonlyContract, setReadonlyContract] = useState<ForumContract|undefined>(undefined)
+    const [authorizedContract, setAuthorizedContract] = useState<ForumContract|undefined>(undefined)
+
+    const connect = async (provider: Web3Provider, setter: (c: ForumContract) => any) => {
+        const contract = await connectToForumContract(provider)
+        console.log('connected to contract using provider', provider)
+        setter(contract)
+    }
+
+    useEffect(() => {
+        if (readonly.active && !!readonly.library) {
+            connect(readonly.library, setReadonlyContract)
+        } else {
+            setReadonlyContract(undefined)
+        }
+    }, [readonly.active])
+
+    useEffect(() => {
+        if (authorized.active && !!authorized.library) {
+            console.log('setting authorized contract', authorized)
+            connect(authorized.library, setAuthorizedContract)
+        }
+    }, [authorized.active])
+
+    const context = { authorized, readonly, loggedIn, account, readonlyContract, authorizedContract }
 
     return (
         <ChainContext.Provider value={context} >

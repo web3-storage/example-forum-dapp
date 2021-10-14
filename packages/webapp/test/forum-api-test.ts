@@ -64,7 +64,7 @@ describe("ForumAPI", function () {
   describe("Posts", async () => {
     it("Should store and retrieve posts", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!" }
+      const postObj = { body: "This is an amazing post!", title: 'A great post' }
       stubStoragePut(cid)
 
       const postId = await forum.addPost(postObj)
@@ -81,7 +81,7 @@ describe("ForumAPI", function () {
 
     it("Should return recent posts in reverse chronological order", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!" }
+      const postObj = { body: "This is an amazing post!", title: 'A great post' }
       stubStoragePut(cid)
       stubGetFile(JSON.stringify(postObj))
 
@@ -102,7 +102,7 @@ describe("ForumAPI", function () {
     it("Should store attachments to a post", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
       const postObj = { 
-        body: "This is an amazing post!", 
+        body: "This is an amazing post!", title: 'A great post', 
         attachments: [
           { name: 'file.txt', content: "Some text content" }
         ] 
@@ -128,7 +128,7 @@ describe("ForumAPI", function () {
   describe("Comments", async () => {
     it("Should add comments for a post", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!" }
+      const postObj = { body: "This is an amazing post!", title: 'A great post' }
       stubStoragePut(cid)
 
       const postId = await forum.addPost(postObj)
@@ -159,7 +159,7 @@ describe("ForumAPI", function () {
 
     it("Should retrieve all comments for a post", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!" }
+      const postObj = { body: "This is an amazing post!", title: 'A great post' }
       stubStoragePut(cid)
 
       const postId = await forum.addPost(postObj)
@@ -184,7 +184,7 @@ describe("ForumAPI", function () {
 
     it("Should allow voting on a post", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!" }
+      const postObj = { body: "This is an amazing post!", title: 'A great post' }
       stubStoragePut(cid)
 
       const postId = await forum.addPost(postObj)
@@ -198,7 +198,7 @@ describe("ForumAPI", function () {
 
     it("Should allow voting on a comment", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!" }
+      const postObj = { body: "This is an amazing post!", title: 'A great post' }
       stubStoragePut(cid)
 
       const postId = await forum.addPost(postObj)
@@ -223,7 +223,7 @@ describe("ForumAPI", function () {
 
     it("Should only count upvotes from the same voter once", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!" }
+      const postObj = { body: "This is an amazing post!", title: 'A great post' }
       stubStoragePut(cid)
 
       const postId = await forum.addPost(postObj)
@@ -238,7 +238,7 @@ describe("ForumAPI", function () {
 
     it("Should only count downvotes from the same voter once", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!" }
+      const postObj = { body: "This is an amazing post!", title: 'A great post' }
       stubStoragePut(cid)
 
       const postId = await forum.addPost(postObj)
@@ -253,7 +253,7 @@ describe("ForumAPI", function () {
 
     it("Should allow a voter to remove their vote", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!" }
+      const postObj = { body: "This is an amazing post!", title: 'A great post' }
       stubStoragePut(cid)
 
       const postId = await forum.addPost(postObj)
@@ -268,7 +268,7 @@ describe("ForumAPI", function () {
 
     it("Should combine votes from multiple voters", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!" }
+      const postObj = { body: "This is an amazing post!", title: 'A great post' }
       stubStoragePut(cid)
 
       const postId = await forum.addPost(postObj)
@@ -286,7 +286,7 @@ describe("ForumAPI", function () {
 
     it("Should fail to vote if vote value is invalid", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!" }
+      const postObj = { body: "This is an amazing post!", title: 'A great post' }
       stubStoragePut(cid)
 
       const postId = await forum.addPost(postObj)

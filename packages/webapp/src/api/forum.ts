@@ -327,6 +327,7 @@ export interface Post {
 }
 
 export interface PostContent {
+  title: string,
   body: string,
   attachments?: Attachment[],
   refs?: AttachmentRef[],

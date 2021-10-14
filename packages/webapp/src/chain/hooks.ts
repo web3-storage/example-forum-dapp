@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 
 import { injected, networkReadonly } from './connectors'
 import { useChainContext } from './context'
+import { requestEthFromLocalFaucet } from './faucet'
 
 export function useReadonlyConnection() {
     const { readonly } = useChainContext()
@@ -42,3 +43,14 @@ export function useEagerConnect() {
     return tried
   }
   
+
+export function useAutoFaucet() {
+    const { authorized } = useChainContext()
+    const { active, account } = authorized
+
+    useEffect(() => {
+        if (active && account) {
+            requestEthFromLocalFaucet(account, "1.0")
+        }
+    }, [active])
+}

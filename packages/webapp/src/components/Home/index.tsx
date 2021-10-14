@@ -1,11 +1,24 @@
+import { useApiContext } from "../../api/context"
 import Layout from "../Layout"
+import PostList from "../PostList"
 
 const Home = () => {
-    return (
+    const { api } = useApiContext()
+    if (!api) {
+        return (
         <Layout>
             <div>
-                main feed goes here...
+                connecting to smart contract...
             </div>
+         </Layout>
+        )
+    }
+
+
+
+    return (
+        <Layout>
+            <PostList api={api} />
         </Layout>
     )
 }
