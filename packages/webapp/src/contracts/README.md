@@ -1,0 +1,1 @@
+The contract npm package will write deployment info to this directory so the frontend can import the info needed to connect to the deployed contract. The resulting `hardhat_contracts.json` file is ignored by git.
