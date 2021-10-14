@@ -8,7 +8,8 @@
     "packages/webapp"
   ],
   "scripts": {
-    "test": "npm run test --workspaces"
+    "test": "npm run test --workspaces",
+    "dev": "concurrently -n contract,webapp \"npm run dev -w packages/contract\" \"sleep 5 && npm run dev -w packages/webapp\""
   },
   "repository": {
     "type": "git",
@@ -27,5 +28,11 @@
   "bugs": {
     "url": "https://github.com/web3-storage/example-forum-dapp/issues"
   },
-  "homepage": "https://github.com/web3-storage/example-forum-dapp#readme"
+  "homepage": "https://github.com/web3-storage/example-forum-dapp#readme",
+  "devDependencies": {
+    "concurrently": "^6.3.0"
+  },
+  "dependencies": {
+    "@web3-react/network-connector": "^6.1.9"
+  }
 }

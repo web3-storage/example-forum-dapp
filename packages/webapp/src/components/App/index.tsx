@@ -8,6 +8,7 @@ import styles from './app.module.css'
 import Login from '../Login'
 import Home from '../Home'
 import { ChainContextProvider } from '../../chain/context';
+import { useEagerConnect, useReadonlyConnection } from "../../chain/hooks";
 
 
 function Routes() {
@@ -25,6 +26,9 @@ function Routes() {
 }
 
 function App() {
+  useReadonlyConnection()
+  useEagerConnect()
+
   return (
     <Router>
       <div className={styles.app}>
