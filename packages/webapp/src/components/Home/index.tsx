@@ -1,9 +1,13 @@
-
+import Layout from "../Layout"
 
 const Home = () => {
-    return <div>
-        yo
-    </div>
+    return (
+        <Layout>
+            <div>
+                main feed goes here...
+            </div>
+        </Layout>
+    )
 }
 
 export default Home

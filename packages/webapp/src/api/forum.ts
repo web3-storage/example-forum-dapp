@@ -6,17 +6,37 @@ import type { Event, BigNumber } from 'ethers'
 import type { Forum as ForumContract } from '../../../contract/typechain'
 export type { Forum as ForumContract } from '../../../contract/typechain'
 
+export interface ForumAPIOptions {
+  readonlyContract: ForumContract,
+  authorizedContract?: ForumContract,
+  storage: Web3Storage,
+}
+
+export class NoAuthorizedAccountError extends Error {
+  constructor() {
+    super(`This operation is only allowed when logged in. Log in with your wallet and try again.`)
+  }
+}
 
 /**
  * Provides a high-level API for interacting with the forum smart contract and Web3.Storage.
  */
 export class ForumAPI {
-  #contract: ForumContract
+  #readonlyContract: ForumContract
+  #authorizedContract: ForumContract | undefined
   #storage: Web3Storage
 
   constructor(opts: ForumAPIOptions) {
-    this.#contract = opts.contract
+    this.#readonlyContract = opts.readonlyContract
+    this.#authorizedContract = opts.authorizedContract
     this.#storage = opts.storage
+  }
+
+  #getAuthorizedContract() {
+    if (!this.#authorizedContract) {
+      throw new NoAuthorizedAccountError()
+    }
+    return this.#authorizedContract
   }
 
   /**
@@ -28,7 +48,7 @@ export class ForumAPI {
    */
   async addPost(post: PostContent): Promise<PostId> {
     const cid = await this.#storePostContent(post)
-    const tx = await this.#contract.addPost(cid)
+    const tx = await this.#getAuthorizedContract().addPost(cid)
     const receipt = await tx.wait()
     const id = idFromEvents('NewPost', receipt.events)
     if (!id) {
@@ -46,13 +66,13 @@ export class ForumAPI {
    * @throws if no post exists with the given ID, or if the post content fails to load
    */
   async getPost(postId: PostId): Promise<Post> {
-    const postStruct = await this.#contract.getPost(postId)
+    const postStruct = await this.#readonlyContract.getPost(postId)
     return this.#hydratePost(postStruct)
   }
 
 
   async getRecentPosts(limit: number = 20): Promise<Post[]> {
-    const postStructs = await this.#contract.getRecentPosts(limit)
+    const postStructs = await this.#readonlyContract.getRecentPosts(limit)
     const promises = postStructs.map(p => this.#hydratePost(p))
     return Promise.all(promises)
   }
@@ -79,7 +99,7 @@ export class ForumAPI {
    */
   async addComment(comment: CommentContent): Promise<CommentId> {
     const cid = await this.#storeCommentContent(comment)
-    const tx = await this.#contract.addComment(comment.postId, cid)
+    const tx = await this.#getAuthorizedContract().addComment(comment.postId, cid)
     const receipt = await tx.wait()
     const id = idFromEvents('NewComment', receipt.events)
     if (!id) {
@@ -96,7 +116,7 @@ export class ForumAPI {
    */
   async getComment(commentId: CommentId): Promise<Comment> {
     // Get comment info from the contract
-    const commentStruct = await this.#contract.getComment(commentId)
+    const commentStruct = await this.#readonlyContract.getComment(commentId)
     return this.#hydrateComment(commentStruct)
   }
 
@@ -109,7 +129,7 @@ export class ForumAPI {
    * @returns - an array of Comment objects
    */
   async getCommentsForPost(postId: PostId): Promise<Comment[]> {
-    const commentStructs = await this.#contract.getPostComments(postId)
+    const commentStructs = await this.#readonlyContract.getPostComments(postId)
     const promises = []
     for (const c of commentStructs) {
       promises.push(this.#hydrateComment(c))
@@ -133,7 +153,7 @@ export class ForumAPI {
    * @param vote - an upvote, downvote, or retraction
    */
   async voteForPost(postId: PostId, vote: VoteValue): Promise<void> {
-    const tx = await this.#contract.voteForPost(postId, vote)
+    const tx = await this.#getAuthorizedContract().voteForPost(postId, vote)
     await tx.wait()
   }
 
@@ -144,7 +164,7 @@ export class ForumAPI {
    * @param vote - an upvote, downvote, or retraction
    */
   async voteForComment(commentId: CommentId, vote: VoteValue): Promise<void> {
-    const tx = await this.#contract.voteForComment(commentId, vote)
+    const tx = await this.#getAuthorizedContract().voteForComment(commentId, vote)
     await tx.wait()
   }
 
@@ -154,7 +174,7 @@ export class ForumAPI {
    * @returns - the total number of votes for the given post or comment, as an ethers BigNumber
    */
   async getVotes(postOrCommentId: PostId | CommentId): Promise<BigNumber> {
-    return this.#contract.getVotes(postOrCommentId)
+    return this.#readonlyContract.getVotes(postOrCommentId)
   }
 
   /**
@@ -292,11 +312,6 @@ function filesFromAttachments(attachments: Attachment[]): File[] {
 //#endregion helpers
 
 //#region types
-
-export interface ForumAPIOptions {
-  contract: ForumContract,
-  storage: Web3Storage,
-}
 
 export type PostId = BigNumberish
 export type CommentId = BigNumberish

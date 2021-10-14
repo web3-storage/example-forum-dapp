@@ -55,10 +55,10 @@ describe("ForumAPI", function () {
   beforeEach(async function () {
     const { contract, signers } = await loadFixture(fixture)
     storage = new Web3Storage({ token: 'token', endpoint: new URL('https://api.example.com') }) 
-    forum = new Forum({ contract, storage })
+    forum = new Forum({ readonlyContract: contract, authorizedContract: contract, storage })
 
     const otherUserContract = contract.connect(signers[1])
-    otherUserForum = new Forum({ contract: otherUserContract, storage })
+    otherUserForum = new Forum({ readonlyContract: otherUserContract, authorizedContract: otherUserContract, storage })
   });
 
   describe("Posts", async () => {

@@ -1,0 +1,13 @@
+
+.container {
+    background-color: #f6f6ef;
+    width: 85%;
+    height: 100%;
+    margin: 0px auto 0 auto;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .spacer {
+    flex-grow: 1;
+  }

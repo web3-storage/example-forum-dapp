@@ -1,10 +1,12 @@
 import { useWeb3React } from '@web3-react/core'
 import { Link } from 'react-router-dom'
+import { useChainContext } from '../../chain/context'
 
 import styles from './header.module.css'
 
 const Account = () => {
-  const { account } = useWeb3React()
+  const { authorized } = useChainContext()
+  const { account } = authorized
 
   if (account == null) {
     return <Link to="/login">login</Link>

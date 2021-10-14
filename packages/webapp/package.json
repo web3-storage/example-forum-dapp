@@ -5,8 +5,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "serve": "vite preview",
-    "test": "mocha --require ts-node/register --extensions ts,tsx 'test/**/*.{ts,tsx}'",
-    "test:watch": "mocha --require ts-node/register --extensions ts,tsx --watch --watch-files src 'test/**/*.{ts,tsx}'"
+    "test": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\"}' mocha --require ts-node/register --extensions ts,tsx 'test/**/*.{ts,tsx}'",
+    "test:watch": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\"}' mocha --require ts-node/register --extensions ts,tsx --watch --watch-files src 'test/**/*.{ts,tsx}'"
   },
   "dependencies": {
     "@ethersproject/providers": "^5.4.5",
