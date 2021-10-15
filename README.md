@@ -2,6 +2,45 @@
 
 This repository contains an example of a decentralized application that uses [Web3.Storage](https://web3.storage) and [Ethereum](https://ethereum.org) to provide a simple online forum.
 
+## Install / Run
+
+There's no long-lived deployment of the app yet, so you'll need to run in local development mode.
+
+You'll need a recent version of Node.js and npm version 7 or greater.
+
+1. Clone this repo:
+
+   ```bash
+   git clone https://github.com/web3-storage/example-forum-dapp
+   ```
+
+2. Install dependencies:
+
+  ```bash
+  npm install
+  ```
+
+3. Run local blockchain and webapp server:
+
+  ```
+  npm run dev
+  ```
+
+Leave the last command running and open your browser to [http://localhost:3000](http://localhost:3000).
+
+### Setting up MetaMask
+
+To interact with the app, you'll need an Ethereum wallet like [MetaMask](https://metamask.io) installed.
+You'll also need to configure MetaMask to use the local HardHat development network. 
+
+To do that, open the MetaMask extension and go to `Settings -> Network -> Localhost 8545` and change the Chain ID input to `31337`.
+
+**Important**: if you've made any write transactions, the next time you restart the local blockchain you'll get an error about an incorrect nonce if you try to make a transaction on the new chain. This is because MetaMask still remembers the state of the old blockchain instance. To fix this, open MetaMask and go to `Settings -> Advanced -> Reset Account` and press the `Reset Account` button. This will not mess with your balances or any important state - it just clears out the stale history.
+
+### Getting play money
+
+When running in local development mode, there will be a `faucet` link in the header of the app. Click the link to have a small amount of devnet ETH deposited into your MetaMask wallet. You'll need to do this before performing any write operations (e.g. posting, commenting, voting, etc).
+
 ## App overview
 
 The app consists of a smart contract and supporting TypeScript code for interacting with the blockchain, along with a single-page web app, written in React.
