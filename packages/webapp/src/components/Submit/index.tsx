@@ -33,6 +33,13 @@ export default function Submit() {
     addPostMutation.mutate({ api, postContent })
   }
 
+  const { isLoading: isSubmitting, error: submissionError, isSuccess, data: postId } = addPostMutation
+  const submitEnabled = title && text && !isSubmitting
+
+  if (isSuccess && postId) {
+    return <Redirect to={`/posts/${postId.toString()}`} />
+  }
+
   return (
     <Layout>
         <form className={styles.submitForm} onSubmit={e => submitForm(e)}>
@@ -44,7 +51,9 @@ export default function Submit() {
                 <label htmlFor='text-input'>text</label>
                 <textarea id='text-input' onChange={e => { setText(e.target.value) }} />
             </div>
-            <button className={styles.submitButton} type='submit'>submit</button>
+            <button disabled={!submitEnabled} className={styles.submitButton} type='submit'>submit</button>
+            { isSubmitting && 'Submitting post...' }
+            { submissionError && 'Error adding post: ' + submissionError}
         </form>
     </Layout>
   )

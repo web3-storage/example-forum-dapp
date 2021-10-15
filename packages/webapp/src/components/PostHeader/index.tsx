@@ -1,13 +1,10 @@
 import { Link } from "react-router-dom"
-import type { Post } from "../../api/forum"
+import { Post, Upvote } from "../../api/forum"
 import styles from './postheader.module.css'
-import grayArrow from '../../images/grayarrow.gif'
-
-function UpvoteButton(props: { onClick: () => void }) {
-  return <a href='#' onClick={props.onClick}>
-    <img src={grayArrow} />
-  </a>
-}
+import { accountDisplayName } from "../../utils"
+import { useVoteForPost } from "../../api/queries"
+import { useApiContext } from "../../api/context"
+import UpvoteButton from "../UpvoteButton"
 
 export default function PostHeader(props: {post: Post}) {
   const { post } = props
@@ -15,19 +12,27 @@ export default function PostHeader(props: {post: Post}) {
   const numComments = post.numComments || 0
   
   const blockno = post.createdAtBlock.toString()
+  const author = accountDisplayName(post.author)
 
-  // TODO: usernames?
-  const author = post.author.substring(0, 6) + '...'
+  const { api } = useApiContext()
+  const voteMutation = useVoteForPost()
 
   const upvoteClicked = () => {
-    console.log('TODO: implement upvotes')
+    if (!api) {
+      console.warn('no connection to contract')
+      return
+    }
+    voteMutation.mutate({ api, postId: post.id, vote: Upvote })
   }
+
+  const { isLoading, isSuccess } = voteMutation
+  const showUpvoteButton = !isLoading && !isSuccess
 
   return (
       <div 
         className={styles.container}
         key={'post-' + post.id.toString()}>
-          <UpvoteButton onClick={upvoteClicked} />
+          {showUpvoteButton && <UpvoteButton onClick={upvoteClicked} />}
 
           <div className={styles.infoRows}>
             <div className={styles.postTitleRow}>

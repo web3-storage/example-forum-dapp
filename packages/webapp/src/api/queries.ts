@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from 'react-query'
 
-import type { ForumAPI, PostId, PostContent, CommentContent } from './forum'
+import type { ForumAPI, PostId, PostContent, CommentContent, VoteValue, CommentId } from './forum'
 
 export const postQueryKeys = {
     recentPosts: ['posts', 'recent'] as const,
@@ -35,10 +35,10 @@ export function useAddPost() {
 
 export function useAddComment() {
     const queryClient = useQueryClient()
-    const executor = (opts: {api: ForumAPI, commentContent: CommentContent}) =>
-        opts.api.addComment(opts.commentContent)
+    const fn = ({api, commentContent}: {api: ForumAPI, commentContent: CommentContent}) =>
+        api.addComment(commentContent)
 
-    return useMutation(executor, {
+    return useMutation(fn, {
         onSuccess: (_data, { commentContent }) => {
             console.log('posted comment successfully')
             queryClient.invalidateQueries(
@@ -48,4 +48,33 @@ export function useAddComment() {
             console.error('error posting comment', error)
         }
     })
+}
+
+export type VoteForPostOpts = {
+  api: ForumAPI,
+  postId: PostId,
+  vote: VoteValue,
+}
+
+export function useVoteForPost() {
+    const queryClient = useQueryClient()
+
+    return useMutation(({api, postId, vote}: VoteForPostOpts) => api.voteForPost(postId, vote), {
+        onSuccess: (_data, { postId }) => {
+            queryClient.invalidateQueries(postQueryKeys.postDetail(postId, { includeCommentCount: true }))
+        }
+    })
+}
+
+
+export type VoteForCommentOpts = {
+  api: ForumAPI,
+  commentId: CommentId,
+  vote: VoteValue,
+}
+
+export function useVoteForComment() {
+  // TODO: invalidate comment list for parent post?
+  return useMutation(({api, commentId, vote}: VoteForCommentOpts) =>
+    api.voteForComment(commentId, vote))
 }

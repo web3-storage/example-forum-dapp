@@ -26,13 +26,15 @@ export default function PostDetails() {
   const [commentText, setCommentText] = useState('')
   const addCommentMutation = useAddComment()
 
+  const { isIdle, isLoading, isError, data, error } = postQuery
+  const { isLoading: isPostingComment, error: commentError } = addCommentMutation
+  
+
   if (!api) {
     return <div>
       Connecting to smart contract...
     </div>
   }
-
-  const { isIdle, isLoading, isError, data, error } = postQuery
 
   const postHeader = isIdle 
     ? 'Connecting to smart contract..'
@@ -51,10 +53,6 @@ export default function PostDetails() {
     addCommentMutation.mutate({ api, commentContent })
   }
 
-  const { isLoading: isPostingComment, isError: isCommentError, isSuccess: isCommentSuccess, error: commentError } = addCommentMutation
-  if (isCommentError || isCommentSuccess && commentText !== '') {
-    setCommentText('')
-  }
 
   return (
     <Layout>
@@ -68,7 +66,7 @@ export default function PostDetails() {
           <button type='submit' disabled={!commentText || isPostingComment}>add comment</button>
 
           {isPostingComment && `Submitting comment...`}
-          {isCommentError && `Error posting comment: ${commentError}`}
+          {commentError && `Error posting comment: ${commentError}`}
         </form>
         <CommentList postId={postId} />
       </div>

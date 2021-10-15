@@ -1,13 +1,16 @@
-import { useQuery } from 'react-query'
+import { UseMutationResult, useQuery } from 'react-query'
 import { useApiContext } from '../../api/context'
-import type { Comment, PostId } from '../../api/forum'
-import { commentQueryKeys } from '../../api/queries'
+import { Comment, PostId, Upvote } from '../../api/forum'
+import type { ForumAPI } from '../../api/forum'
+import { commentQueryKeys, useVoteForComment, VoteForCommentOpts } from '../../api/queries'
 import styles from './commentlist.module.css'
-import grayArrow from '../../images/grayarrow.gif'
+import UpvoteButton from '../UpvoteButton'
+import { accountDisplayName } from '../../utils'
 
 export default function CommentList(props: { postId: PostId }) {
     const { postId } = props
     const { api } = useApiContext()
+    const voteMutation = useVoteForComment()
 
     const commentsQuery = useQuery(
         commentQueryKeys.commentsForPost(postId),
@@ -20,7 +23,7 @@ export default function CommentList(props: { postId: PostId }) {
     const { isIdle, isLoading, isError, data, error } = commentsQuery
 
     const comments = data ? (data as Comment[]) : []
-    const commentViews = comments.map(comment => CommentView({comment}))
+    const commentViews = comments.map(comment => CommentView({comment, api, voteMutation}))
 
     return (
         <div>
@@ -33,16 +36,21 @@ export default function CommentList(props: { postId: PostId }) {
 }
 
 
-function CommentView(props: { comment: Comment }) {
-    const { comment } = props
-    const author = comment.author.substring(0, 8) + '...' // TODO: refactor into helper'
-
-    // TODO: working vote button
-    const upvoteButton = <img src={grayArrow} />
+function CommentView(props: { comment: Comment, api: ForumAPI | undefined, voteMutation: UseMutationResult<void, unknown, VoteForCommentOpts, unknown>}) {
+    const { comment, voteMutation, api } = props
+    const author = accountDisplayName(comment.author)
+    
+    const upvoteClicked = () => {
+      if (!api) {
+        console.warn('no connection to contract')
+        return
+      }
+      voteMutation.mutate({ api, commentId: comment.id, vote: Upvote })
+    }
 
     return (
         <div className={styles.commentWrapper} key={`comment-${comment.id}`}>
-            {upvoteButton}
+            <UpvoteButton onClick={upvoteClicked} />
             <div className={styles.commentContainer}>
                 <div className={styles.commentHeader}>
                     {author} at block #{comment.createdAtBlock.toString()}

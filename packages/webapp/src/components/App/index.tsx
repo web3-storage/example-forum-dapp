@@ -11,7 +11,7 @@ import Home from '../Home'
 import About from "../About";
 
 import { ChainContextProvider } from '../../chain/context';
-import { useAutoFaucet, useEagerConnect, useReadonlyConnection } from "../../chain/hooks";
+import { useEagerConnect, useReadonlyConnection } from "../../chain/hooks";
 import Submit from "../Submit";
 import { ApiContextProvider } from "../../api/context";
 import PostDetails from "../PostDetails";
@@ -47,7 +47,6 @@ function Routes() {
 function App() {
   useReadonlyConnection()
   useEagerConnect()
-  useAutoFaucet()
 
   return (
     <Router>
