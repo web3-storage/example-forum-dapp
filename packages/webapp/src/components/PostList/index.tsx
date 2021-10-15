@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "react-query";
 import { ForumAPI, Post } from "../../api/forum";
-
+import { postQueryKeys } from "../../api/queries";
+import PostHeader from "../PostHeader";
+import styles from './postlist.module.css'
 
 interface Props {
     api: ForumAPI
@@ -8,43 +11,38 @@ interface Props {
 
 export default function PostList(props: Props) {
     const { api } = props
-    const [posts, setPosts] = useState<Post[]>([])
-    const [fetching, setFetching] = useState(false)
-    const [errorMessage, setErrorMessage] = useState<string|undefined>()
 
-    useEffect(() => {
-        setFetching(true)
-        api.getRecentPosts().then(_posts => {
-            setPosts(_posts)
-            console.log('got posts', _posts)
-            setFetching(false)
+    const opts = { includeScore: true, includeCommentCount: true}
+    const queryKey = postQueryKeys.recentPostsWithOptions(opts)
+    const { isLoading, isError, data, error } = 
+        useQuery(queryKey, () => {
+            console.log('fetching recent posts with options', opts)
+            return api.getRecentPosts(opts)
         })
-        .catch(err => {
-            console.error(err)
-            setErrorMessage(err.message)
-            setFetching(false)
-        })
-    }, [])
+
+    let posts: Post[] = []
+    if (!isLoading && !isError) {
+        posts = data as Post[]
+    }
 
     const empty = posts.length === 0
-    const postViews = posts.map(PostEntry)
+
+    // TODO: sort by score / creation time, etc
+    const postViews = posts.map((p, i) => (
+      <div className={styles.postEntry} key={`post-${p.id}`}>
+        <span className={styles.rankNumber}>{`${i+1}.`}</span>
+        <PostHeader post={p} />
+      </div>
+    ))
 
     return (
         <div>
-            {fetching && 'fetching posts...'}
-            {errorMessage && `Error: ${errorMessage}`}
-            {empty && `There's nothing here yet... why not submit something?`}
+            {isLoading && 'fetching posts...'}
+            {isError && `Error: ${error}`}
+            {!isLoading && empty && `There's nothing here yet... why not submit something?`}
             {postViews}
         </div>
     )
 }
 
 
-function PostEntry(post: Post) {
-    // TODO: show votes, etc
-    return (
-        <div key={'post-' + post.id.toString()}>
-            {post.content.title}
-        </div>
-    )
-}

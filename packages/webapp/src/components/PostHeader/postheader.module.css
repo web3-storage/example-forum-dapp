@@ -1,0 +1,22 @@
+.container {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.infoRows {
+  display: flex;
+  flex-direction: column;
+  margin-left: 5px;
+}
+
+.postTitleRow {
+  font-size: var(--font-size-story-link);
+}
+
+.postDetailsRow {
+  font-size: var(--font-size-story-details);
+  color: var(--color-muted-text);
+  margin-top: 3px;
+}
+

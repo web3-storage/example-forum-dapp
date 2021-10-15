@@ -1,0 +1,14 @@
+@import '../../styles/vars.css';
+
+
+.postEntry {
+  margin: 10px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.rankNumber {
+  color: var(--color-muted-text);
+  margin-right: 5px;
+}

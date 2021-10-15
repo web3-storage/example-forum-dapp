@@ -12,6 +12,8 @@ import { ChainContextProvider } from '../../chain/context';
 import { useAutoFaucet, useEagerConnect, useReadonlyConnection } from "../../chain/hooks";
 import Submit from "../Submit";
 import { ApiContextProvider } from "../../api/context";
+import PostDetails from "../PostDetails";
+import { QueryClient, QueryClientProvider } from "react-query";
 
 
 function Routes() {
@@ -19,7 +21,7 @@ function Routes() {
     <Route exact path='/'>
       <Home />
     </Route>
-    <Route path='/news'>
+    <Route path='/newest'>
       <Home />
     </Route>
     <Route path='/login'>
@@ -30,6 +32,9 @@ function Routes() {
     </Route>
     <Route path='/logout'>
       <Logout />
+    </Route>
+    <Route path='/posts/:postId'>
+      <PostDetails />
     </Route>
   </Switch>
 }
@@ -48,11 +53,15 @@ function App() {
   )
 }
 
+const queryClient = new QueryClient()
+
 export default function () {
   return (
     <ChainContextProvider>
       <ApiContextProvider>
-        <App />
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
       </ApiContextProvider>
     </ChainContextProvider>
   )

@@ -4,17 +4,26 @@ import { injected, networkReadonly } from './connectors'
 import { useChainContext } from './context'
 import { requestEthFromLocalFaucet } from './faucet'
 
+/**
+ * Connects to the read-only RPC provider.
+ */
 export function useReadonlyConnection() {
     const { readonly } = useChainContext()
     const { activate } = readonly
 
     useEffect(() => {
         activate(networkReadonly, undefined, true).then(() => {
-            console.log('network connection activated')
+            console.log('readonly RPC connection activated')
         })
     }, [])
 }
 
+/**
+ * Tries to connect to the injected provided (e.g. metamask), in case the
+ * user has previously authorized the site.
+ * 
+ * @returns true if we have attempted to connect and either succeded or failed
+ */
 export function useEagerConnect() {
     const { authorized } = useChainContext()
     const { activate, active } = authorized
@@ -44,13 +53,18 @@ export function useEagerConnect() {
   }
   
 
+/**
+ * Automatically sends a small amount of eth from the local development chain to
+ * the user's connected wallet once they connect their account. Has no effect
+ * if not connected to the localhost network.
+ */
 export function useAutoFaucet() {
     const { authorized } = useChainContext()
     const { active, account } = authorized
 
     useEffect(() => {
         if (active && account) {
-            requestEthFromLocalFaucet(account, "1.0")
+            requestEthFromLocalFaucet(account, "0.1")
         }
     }, [active])
 }

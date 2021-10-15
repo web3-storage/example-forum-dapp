@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Redirect } from "react-router";
 import { useApiContext } from "../../api/context";
+import { useAddPost } from "../../api/queries";
 import { useChainContext } from "../../chain/context";
 import Layout from "../Layout";
 import styles from './submit.module.css'
@@ -10,6 +11,7 @@ export default function Submit() {
   const { api } = useApiContext()
   const [title, setTitle] = useState('')
   const [text, setText] = useState('')
+  const addPostMutation = useAddPost()
 
   if (!loggedIn) {
       return <Redirect to='/login' />
@@ -20,6 +22,7 @@ export default function Submit() {
           No contract connection available...
       </div>
   }
+  
 
   const submitForm = (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,14 +30,7 @@ export default function Submit() {
         title,
         body: text,
     }
-    
-    api.addPost(postContent)
-      .then(postId => {
-          console.log('new post created', postId)
-      })
-      .catch(err => {
-          console.error('error adding post', err)
-      })
+    addPostMutation.mutate({ api, postContent })
   }
 
   return (
@@ -48,7 +44,7 @@ export default function Submit() {
                 <label htmlFor='text-input'>text</label>
                 <textarea id='text-input' onChange={e => { setText(e.target.value) }} />
             </div>
-            <button type='submit'>submit</button>
+            <button className={styles.submitButton} type='submit'>submit</button>
         </form>
     </Layout>
   )

@@ -66,8 +66,11 @@ contract Forum {
   /// @dev counter for issuing comment ids
   Counters.Counter private commentIds;
 
-  /// @dev maps post or comment id to vote state
-  mapping(uint256 => VoteCount) private votes;
+  /// @dev maps post id to vote state
+  mapping(uint256 => VoteCount) private postVotes;
+
+  /// @dev maps comment id to vote state
+  mapping(uint256 => VoteCount) private commentVotes;
 
   /// @dev maps author address to vote totals
   mapping(address => Karma) private authorKarma;
@@ -196,10 +199,10 @@ contract Forum {
     require(voteValue >= -1 && voteValue <= 1, "Invalid vote value. Must be -1, 0, or 1");
 
     bytes32 voterId = _voterId(msg.sender);
-    int8 oldVote = votes[postId].votes[voterId];
+    int8 oldVote = postVotes[postId].votes[voterId];
     if (oldVote != voteValue) {
-      votes[postId].votes[voterId] = voteValue;
-      votes[postId].total = votes[postId].total - oldVote + voteValue;
+      postVotes[postId].votes[voterId] = voteValue;
+      postVotes[postId].total = postVotes[postId].total - oldVote + voteValue;
 
       address author = posts[postId].author;
       if (author != msg.sender) {
@@ -213,10 +216,10 @@ contract Forum {
     require(voteValue >= -1 && voteValue <= 1, "Invalid vote value. Must be -1, 0, or 1");
 
     bytes32 voterId = _voterId(msg.sender);
-    int8 oldVote = votes[commentId].votes[voterId];
+    int8 oldVote = commentVotes[commentId].votes[voterId];
     if (oldVote != voteValue) {
-      votes[commentId].votes[voterId] = voteValue;
-      votes[commentId].total = votes[commentId].total - oldVote + voteValue;
+      commentVotes[commentId].votes[voterId] = voteValue;
+      commentVotes[commentId].total = commentVotes[commentId].total - oldVote + voteValue;
 
       address author = comments[commentId].author;
       if (author != msg.sender) {
@@ -225,8 +228,12 @@ contract Forum {
     }
   }
 
-  function getVotes(uint256 postOrCommentId) public view returns (int256) {
-    return votes[postOrCommentId].total;
+  function getPostScore(uint256 postId) public view returns (int256) {
+    return postVotes[postId].total;
+  }
+
+  function getCommentScore(uint256 commentId) public view returns (int256) {
+    return commentVotes[commentId].total;
   }
 
   function getPostKarma(address author) public view returns (int256) {

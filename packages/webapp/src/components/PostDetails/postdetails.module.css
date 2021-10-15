@@ -1,0 +1,20 @@
+
+.container {
+    margin: 10px;
+}
+
+.commentForm {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    min-height: 120px;
+    margin-top: 10px;
+    margin-bottom: 50px;
+}
+
+.commentForm textarea {
+    min-width: 400px;
+    min-height: 80px;
+}
+

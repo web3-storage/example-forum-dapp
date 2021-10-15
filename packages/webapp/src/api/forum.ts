@@ -71,14 +71,35 @@ export class ForumAPI {
   }
 
 
-  async getRecentPosts(limit: number = 20): Promise<Post[]> {
+  async getRecentPosts(opts: {limit?: number, includeScore?: boolean, includeCommentCount?: boolean} = {}): Promise<Post[]> {
+    const limit = opts.limit || 20
+    const { includeScore, includeCommentCount } = opts
+
     const postStructs = await this.#readonlyContract.getRecentPosts(limit)
+
     const promises = postStructs.map(p => this.#hydratePost(p))
-    return Promise.all(promises)
+    const posts = await Promise.all(promises)
+
+    if (includeScore) {
+      const scorePromises = postStructs.map(p => this.#readonlyContract.getPostScore(p.id))
+      const scores = await Promise.all(scorePromises)
+      for (let i = 0; i < posts.length; i++) {
+        posts[i].score = scores[i].toNumber()
+      }
+    }
+
+    if (includeCommentCount) {
+      const countPromises = postStructs.map(p => this.#readonlyContract.getNumberOfComments(p.id))
+      const counts = await Promise.all(countPromises)
+      for (let i = 0; i < posts.length; i++) {
+        posts[i].numComments = counts[i].toNumber()
+      }
+    }
+    return posts
   }
 
   async #hydratePost(postStruct: PostStruct): Promise<Post> {
-    const { contentCID, author } = postStruct
+    const { contentCID, author, createdAtBlock } = postStruct
     if (!contentCID) {
       throw new Error(`post struct has no content cid`)
     }
@@ -88,7 +109,7 @@ export class ForumAPI {
     const postObject = await this.#getJson(contentCID)
     // TODO: validate postObject
     const content = postObject as PostContent
-    return { content, contentCID, id, author }
+    return { content, contentCID, id, author, createdAtBlock }
   }
 
   /**
@@ -138,12 +159,12 @@ export class ForumAPI {
   }
 
   async #hydrateComment(commentStruct: CommentStruct): Promise<Comment> {
-    const { contentCID, author } = commentStruct
+    const { contentCID, author, createdAtBlock } = commentStruct
     const id = commentStruct.id.toString()
     
     // use contentCID to fetch comment content
     const content = await this.#getJson(contentCID) as CommentContent // TODO: validate
-    return { content, contentCID, author, id }
+    return { content, contentCID, author, id, createdAtBlock }
   }
 
   /**
@@ -324,6 +345,10 @@ export interface Post {
   author: Address,
   content: PostContent,
   contentCID: CIDString,
+  createdAtBlock: BigNumberish,
+
+  score?: number,
+  numComments?: number,
 }
 
 export interface PostContent {
@@ -338,6 +363,7 @@ export interface Comment {
   author: Address,
   content: CommentContent,
   contentCID: CIDString,
+  createdAtBlock: BigNumberish,
 }
 
 export interface CommentContent {

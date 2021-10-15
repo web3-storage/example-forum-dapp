@@ -13,21 +13,21 @@
     margin: 10px;
 }
 
-label {
+.inputGroup label {
     color: #828282;
     min-width: 30px;
     padding-right: 20px;
 }
 
-input {
+.inputGroup input {
     min-width: 400px;
 }
 
-textarea {
+.inputGroup textarea {
     min-width: 400px;
     min-height: 80px;
 }
 
-button {
+.submitButton {
     margin-left: 60px;
 }
