@@ -48,8 +48,12 @@ const Header = () => {
 
   return (
     <header className={styles.header}>
-      <Logo />
-      <span className={styles.siteName}>Web3 News</span>
+      <Link to='/'>
+        <Logo />
+      </Link>
+      <Link to='/'>
+        <span className={styles.siteName}>Web3 News</span>
+      </Link>
       {links}
       <div className={styles.spacer} />
       <Account />

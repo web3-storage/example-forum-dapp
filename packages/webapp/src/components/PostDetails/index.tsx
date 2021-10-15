@@ -51,6 +51,11 @@ export default function PostDetails() {
     addCommentMutation.mutate({ api, commentContent })
   }
 
+  const { isLoading: isPostingComment, isError: isCommentError, isSuccess: isCommentSuccess, error: commentError } = addCommentMutation
+  if (isCommentError || isCommentSuccess && commentText !== '') {
+    setCommentText('')
+  }
+
   return (
     <Layout>
       <div className={styles.container}>
@@ -59,8 +64,11 @@ export default function PostDetails() {
         </div>
 
         <form className={styles.commentForm} onSubmit={submitComment}>
-          <textarea onChange={(e) => setCommentText(e.target.value)} />
-          <button type='submit' disabled={!commentText}>add comment</button>
+          <textarea value={commentText} onChange={(e) => setCommentText(e.target.value)} />
+          <button type='submit' disabled={!commentText || isPostingComment}>add comment</button>
+
+          {isPostingComment && `Submitting comment...`}
+          {isCommentError && `Error posting comment: ${commentError}`}
         </form>
         <CommentList postId={postId} />
       </div>

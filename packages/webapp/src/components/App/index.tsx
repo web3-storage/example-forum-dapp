@@ -8,6 +8,8 @@ import styles from './app.module.css'
 import Login from '../Login'
 import Logout from '../Logout'
 import Home from '../Home'
+import About from "../About";
+
 import { ChainContextProvider } from '../../chain/context';
 import { useAutoFaucet, useEagerConnect, useReadonlyConnection } from "../../chain/hooks";
 import Submit from "../Submit";
@@ -23,6 +25,9 @@ function Routes() {
     </Route>
     <Route path='/newest'>
       <Home />
+    </Route>
+    <Route path='/about'>
+      <About />
     </Route>
     <Route path='/login'>
       <Login />
