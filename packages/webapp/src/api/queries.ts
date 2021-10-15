@@ -10,7 +10,10 @@ export const postQueryKeys = {
         includeCommentCount?: boolean }) => 
         [...postQueryKeys.recentPosts, opts] as const,
 
-    postDetail: (postId: PostId) => ['posts', 'details', postId.toString()] as const,
+    postDetail: (
+        postId: PostId, 
+        opts: { includeScore?: boolean, includeCommentCount?: boolean } = { }
+        ) => ['posts', 'details', postId.toString(), opts] as const,
 
 }
 
@@ -30,12 +33,19 @@ export function useAddPost() {
     })
 }
 
-export function useAddComment(api: ForumAPI) {
+export function useAddComment() {
     const queryClient = useQueryClient()
-    return useMutation(api.addComment, {
-        onSuccess: (_data, commentContent) => {
+    const executor = (opts: {api: ForumAPI, commentContent: CommentContent}) =>
+        opts.api.addComment(opts.commentContent)
+
+    return useMutation(executor, {
+        onSuccess: (_data, { commentContent }) => {
+            console.log('posted comment successfully')
             queryClient.invalidateQueries(
                 commentQueryKeys.commentsForPost(commentContent.postId))
+        },
+        onError: (error) => {
+            console.error('error posting comment', error)
         }
     })
 }

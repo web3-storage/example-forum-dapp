@@ -1,1 +1,21 @@
 
+@import '../../styles/vars.css';
+
+.commentWrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.commentContainer {
+    display: flex;
+    flex-direction: column;
+    margin-left: 10px;
+    margin-bottom: 20px;
+}
+
+.commentHeader {
+    color: var(--color-muted-text);
+    font-size: var(--font-size-story-details);
+
+}

@@ -65,9 +65,22 @@ export class ForumAPI {
    * @returns the post with the given id.
    * @throws if no post exists with the given ID, or if the post content fails to load
    */
-  async getPost(postId: PostId): Promise<Post> {
+  async getPost(postId: PostId, opts?: { includeScore?: boolean, includeCommentCount?: boolean}): Promise<Post> {
     const postStruct = await this.#readonlyContract.getPost(postId)
-    return this.#hydratePost(postStruct)
+    const post = await this.#hydratePost(postStruct)
+
+    const { includeScore, includeCommentCount } = opts || {}
+    if (includeScore) {
+      const score = await this.#readonlyContract.getPostScore(postId)
+      post.score = score.toNumber()
+    }
+
+    if (includeCommentCount) {
+      const numComments = await this.#readonlyContract.getNumberOfComments(postId)
+      post.numComments = numComments.toNumber()
+    }
+
+    return post
   }
 
 

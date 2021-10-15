@@ -41,8 +41,6 @@ const Header = () => {
   const links = <div className={styles.links}>
     <Link to="/newest">new</Link> 
     {' | '} 
-    <Link to="/newcomments">comments</Link> 
-    {' | '} 
     <Link to="/about">about</Link>
     {' | '}
     <Link to="/submit">submit</Link>

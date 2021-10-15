@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "react-query";
+import { Link } from "react-router-dom";
 import { ForumAPI, Post } from "../../api/forum";
 import { postQueryKeys } from "../../api/queries";
 import PostHeader from "../PostHeader";
@@ -39,7 +40,10 @@ export default function PostList(props: Props) {
         <div>
             {isLoading && 'fetching posts...'}
             {isError && `Error: ${error}`}
-            {!isLoading && empty && `There's nothing here yet... why not submit something?`}
+            {!isLoading && empty && 
+              <span>
+                There's nothing here yet... why not <Link to='/submit'>submit something?</Link>
+              </span>}
             {postViews}
         </div>
     )
