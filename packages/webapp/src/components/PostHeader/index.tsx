@@ -2,27 +2,27 @@ import { Link } from "react-router-dom"
 import { Post, Upvote } from "../../api/forum"
 import styles from './postheader.module.css'
 import { accountDisplayName } from "../../utils"
-import { useVoteForPost } from "../../api/queries"
+import { useVoteForItem } from "../../api/queries"
 import { useApiContext } from "../../api/context"
 import UpvoteButton from "../UpvoteButton"
 
 export default function PostHeader(props: {post: Post}) {
   const { post } = props
   const score = post.score || 0
-  const numComments = post.numComments || 0
+  const numComments = post.childIds.length
   
   const blockno = post.createdAtBlock.toString()
   const author = accountDisplayName(post.author)
 
   const { api } = useApiContext()
-  const voteMutation = useVoteForPost()
+  const voteMutation = useVoteForItem()
 
   const upvoteClicked = () => {
     if (!api) {
       console.warn('no connection to contract')
       return
     }
-    voteMutation.mutate({ api, postId: post.id, vote: Upvote })
+    voteMutation.mutate({ api, itemId: post.id, vote: Upvote })
   }
 
   const { isLoading, isSuccess } = voteMutation

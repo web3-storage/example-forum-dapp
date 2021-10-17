@@ -7,39 +7,35 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 contract Forum {
   using Counters for Counters.Counter;
   
-  /**
-    * @notice Represents a single forum post. 
-    */
-  struct Post {
-    /// @notice Unique post id, assigned at post creation.
-    uint256 id;
-
-    /// @notice address of post author.
-    address author;
-
-    /// @notice IPFS CID of post content.
-    string contentCID;
-
-    /// @notice block number when post was submitted
-    uint256 createdAtBlock;
+  enum ItemKind {
+    POST,
+    COMMENT
   }
 
-  /// @notice Represents a comment attached to a forum post.
-  struct Comment {
-    /// @notice Unique comment id, assigned at comment creation.
+  /**
+    * @notice Represents a single forum post or comment. 
+    */
+  struct Item {
+    /// @notice what kind of item (post or comment)
+    ItemKind kind;
+
+    /// @notice Unique item id, assigned at creation time.
     uint256 id;
 
-    /// @notice address of comment author.
+    /// @notice Id of parent item. Posts have parentId == 0.
+    uint256 parentId;
+
+    /// @notice address of author.
     address author;
 
-    /// @notice Unique id of post this comment belongs to.
-    uint256 postId;
-
-    /// @notice IPFS CID of comment content.
-    string contentCID;
-
-    /// @notice block number when comment was submitted
+    /// @notice block number when item was submitted
     uint256 createdAtBlock;
+
+    /// @notice ids of all child items, with oldest items at front.
+    uint256[] childIds;
+
+    /// @notice IPFS CID of item content.
+    string contentCID;
   }
 
   /// @notice Vote state for a particular post or comment.
@@ -51,50 +47,26 @@ contract Forum {
     int256 total;
   }
 
-  /// @notice Per-author vote totals for posts and comments.
-  struct Karma {
-    /// @notice total of all votes for posts by this author.
-    int256 post;
-
-    /// @notice total of all votes for comments by this author.
-    int256 comment;
-  }
-
-  /// @dev counter for issuing post ids
-  Counters.Counter private postIds;
+  /// @dev counter for issuing item ids
+  Counters.Counter private itemIdCounter;
   
-  /// @dev counter for issuing comment ids
-  Counters.Counter private commentIds;
+  /// @dev maps item id to vote state
+  mapping(uint256 => VoteCount) private itemVotes;
 
-  /// @dev maps post id to vote state
-  mapping(uint256 => VoteCount) private postVotes;
+  /// @dev maps author address total post & comment vote score
+  mapping(address => int256) private authorKarma;
 
-  /// @dev maps comment id to vote state
-  mapping(uint256 => VoteCount) private commentVotes;
+  /// @dev maps item id to item
+  mapping(uint256 => Item) private items;
 
-  /// @dev maps author address to vote totals
-  mapping(address => Karma) private authorKarma;
+  /// @dev array of all post ids, with oldest posts at beginning
+  uint256[] private postIds;
 
-  /// @dev maps post id to posts
-  mapping(uint256 => Post) private posts;
-
-  /// @dev maps comment id to comments
-  mapping(uint256 => Comment) private comments;
-
-  /// @dev maps post id to comment ids attached to post. Most recent comments are at end of array.
-  mapping(uint256 => uint256[]) private postComments;
-
-  /// @notice NewPost events are emitted when a post is created.
-  event NewPost(
+  /// @notice NewItem events are emitted when a post or comment is created.
+  event NewItem(
     uint256 indexed id,
+    uint256 indexed parentId,
     address indexed author
-  );
-
-  /// @notice NewComment events are emitted when a comment is created.
-  event NewComment(
-    uint256 indexed id,
-    address indexed author,
-    uint256 indexed postId
   );
 
   /**
@@ -102,146 +74,89 @@ contract Forum {
     * @param contentCID IPFS CID of post content object.
    */
   function addPost(string memory contentCID) public {
-    postIds.increment();
-    uint256 id = postIds.current();
+    itemIdCounter.increment();
+    uint256 id = itemIdCounter.current();
     address author = msg.sender;
 
-    posts[id] = Post(id, author, contentCID, block.number);
-    emit NewPost(id, author);
+    uint256[] memory childIds;
+    items[id] = Item(ItemKind.POST, id, 0, author, block.number, childIds, contentCID);
+    emit NewItem(id, 0, author);
   }
 
   /**
-    * @notice Fetch a post by id.
-    * @dev reverts if no post exists with the given id.
+    * @notice Fetch a item by id.
+    * @dev reverts if no item exists with the given id.
     */
-  function getPost(uint256 postId) public view returns (Post memory) {
-    require(posts[postId].id == postId, "No post found");
-    return posts[postId];
+  function getItem(uint256 itemId) public view returns (Item memory) {
+    require(items[itemId].id == itemId, "No item found");
+    return items[itemId];
   }
 
   /**
    * @notice Return up to `limit` posts, in reverse chronological order.
    * @dev The returned array may have fewer than `limit` items if there aren't many posts.
    */
-  function getRecentPosts(uint8 limit) public view returns (Post[] memory) {
-    uint maxId = postIds.current();
-    if (limit > maxId) {
-      limit = uint8(maxId);
+  function getRecentPosts(uint8 limit) public view returns (Item[] memory) {
+    if (limit > postIds.length) {
+      limit = uint8(postIds.length);
     }
-    Post[] memory out = new Post[](limit);
+    Item[] memory out = new Item[](limit);
+    if (limit == 0) {
+      return out;
+    }
+
+    uint lastPost = postIds.length - 1; 
     for (uint8 i = 0; i < limit; i++) {
-      uint postId = maxId - i;
-      out[i] = posts[postId];
+      uint postIndex = lastPost - i;
+      uint postId = postIds[postIndex];
+      out[i] = items[postId];
     }
     return out;
   }
 
   /** 
-    * @notice Adds a comment to a post.
-    * @dev will revert if post does not exist.
-    * @param postId the id of an existing post
+    * @notice Adds a comment to a post or another comment.
+    * @dev will revert if the parent item does not exist.
+    * @param parentId the id of an existing item
     * @param contentCID IPFS CID of comment content object
     */
-  function addComment(uint256 postId, string memory contentCID) public {
-    require(posts[postId].id == postId, "Post does not exist");
+  function addComment(uint256 parentId, string memory contentCID) public {
+    require(items[parentId].id == parentId, "Parent item does not exist");
 
-    commentIds.increment();
-    uint256 id = commentIds.current();
+    itemIdCounter.increment();
+    uint256 id = itemIdCounter.current();
     address author = msg.sender;
 
-    comments[id] = Comment(id, author, postId, contentCID, block.number);
-    postComments[postId].push() = id;
-    emit NewComment(id, author, postId);
+    items[parentId].childIds.push(id);
+
+    uint256[] memory childIds;
+    items[id] = Item(ItemKind.COMMENT, id, parentId, author, block.number, childIds, contentCID);
+    emit NewItem(id, parentId, author);
   }
 
-  /**
-    * @notice Fetch a comment by id.
-    * @dev Reverts if no comment exists with the given id.
-    */
-  function getComment(uint256 commentId) public view returns (Comment memory) {
-    require(comments[commentId].id == commentId, "No comment found");
-    return comments[commentId];
-  }
-
-  function getPostComments(uint256 postId) public view returns (Comment[] memory) {
-    Comment[] memory out = new Comment[](postComments[postId].length);
-    for (uint i = 0; i < out.length; i++) {
-      uint commentId = postComments[postId][i];
-      out[i] = comments[commentId];
-    }
-    return out;
-  }
-
-  function getNumberOfComments(uint256 postId) public view returns (uint) {
-    return postComments[postId].length;
-  }
-
-  function getPostCommentsPaged(uint256 postId, uint256 offset, uint256 limit) public view returns (Comment[] memory){
-    if (offset >= postComments[postId].length) {
-      Comment[] memory empty = new Comment[](0);
-      return empty;
-    }
-
-    Comment[] memory out = new Comment[](limit);
-    for (uint i = 0; i < out.length; i++) {
-      if (i + offset >= postComments[postId].length) {
-        break;
-      }
-
-      uint commentId = postComments[postId][i+offset];
-      out[i] = comments[commentId];
-    }
-    return out;
-  }
-
-  function voteForPost(uint256 postId, int8 voteValue) public {
-    require(posts[postId].id == postId, "Post does not exist");
+  function voteForItem(uint256 itemId, int8 voteValue) public {
+    require(items[itemId].id == itemId, "Item does not exist");
     require(voteValue >= -1 && voteValue <= 1, "Invalid vote value. Must be -1, 0, or 1");
 
     bytes32 voterId = _voterId(msg.sender);
-    int8 oldVote = postVotes[postId].votes[voterId];
+    int8 oldVote = itemVotes[itemId].votes[voterId];
     if (oldVote != voteValue) {
-      postVotes[postId].votes[voterId] = voteValue;
-      postVotes[postId].total = postVotes[postId].total - oldVote + voteValue;
+      itemVotes[itemId].votes[voterId] = voteValue;
+      itemVotes[itemId].total = itemVotes[itemId].total - oldVote + voteValue;
 
-      address author = posts[postId].author;
+      address author = items[itemId].author;
       if (author != msg.sender) {
-        authorKarma[author].post = authorKarma[author].post - oldVote + voteValue;
+        authorKarma[author] = authorKarma[author] - oldVote + voteValue;
       }
     }
   }
 
-  function voteForComment(uint256 commentId, int8 voteValue) public {
-    require(comments[commentId].id == commentId, "Comment does not exist");
-    require(voteValue >= -1 && voteValue <= 1, "Invalid vote value. Must be -1, 0, or 1");
-
-    bytes32 voterId = _voterId(msg.sender);
-    int8 oldVote = commentVotes[commentId].votes[voterId];
-    if (oldVote != voteValue) {
-      commentVotes[commentId].votes[voterId] = voteValue;
-      commentVotes[commentId].total = commentVotes[commentId].total - oldVote + voteValue;
-
-      address author = comments[commentId].author;
-      if (author != msg.sender) {
-        authorKarma[author].comment = authorKarma[author].comment - oldVote + voteValue;
-      }
-    }
+  function getItemScore(uint256 itemId) public view returns (int256) {
+    return itemVotes[itemId].total;
   }
 
-  function getPostScore(uint256 postId) public view returns (int256) {
-    return postVotes[postId].total;
-  }
-
-  function getCommentScore(uint256 commentId) public view returns (int256) {
-    return commentVotes[commentId].total;
-  }
-
-  function getPostKarma(address author) public view returns (int256) {
-    return authorKarma[author].post;
-  }
-
-  function getCommentKarma(address author) public view returns (int256) {
-    return authorKarma[author].comment;
+  function getAuthorKarma(address author) public view returns (int256) {
+    return authorKarma[author];
   }
 
   function _voterId(address voter) internal pure returns (bytes32) {
