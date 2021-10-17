@@ -10,11 +10,11 @@
   margin-left: 5px;
 }
 
-.postTitleRow {
+.titleRow {
   font-size: var(--font-size-story-link);
 }
 
-.postDetailsRow {
+.detailsRow {
   font-size: var(--font-size-story-details);
   color: var(--color-muted-text);
   margin-top: 3px;

@@ -37,7 +37,7 @@ export default function Submit() {
   const submitEnabled = title && text && !isSubmitting
 
   if (isSuccess && postId) {
-    return <Redirect to={`/posts/${postId.toString()}`} />
+    return <Redirect to={`/items/${postId.toString()}`} />
   }
 
   return (

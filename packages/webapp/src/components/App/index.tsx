@@ -14,7 +14,7 @@ import { ChainContextProvider } from '../../chain/context';
 import { useEagerConnect, useReadonlyConnection } from "../../chain/hooks";
 import Submit from "../Submit";
 import { ApiContextProvider } from "../../api/context";
-import PostDetails from "../PostDetails";
+import ItemDetails from "../ItemDetails";
 import { QueryClient, QueryClientProvider } from "react-query";
 
 
@@ -38,8 +38,8 @@ function Routes() {
     <Route path='/logout'>
       <Logout />
     </Route>
-    <Route path='/posts/:postId'>
-      <PostDetails />
+    <Route path='/items/:itemId'>
+      <ItemDetails />
     </Route>
   </Switch>
 }
