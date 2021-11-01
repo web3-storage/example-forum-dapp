@@ -48,7 +48,7 @@ export class ForumAPI {
    * @throws if content storage fails.
    */
   async addPost(post: PostContent): Promise<ItemId> {
-    const cid = await this.#storePostContent(post)
+    const cid = await this.#storeItemContent(post)
     const tx = await this.#getAuthorizedContract().addPost(cid)
     const receipt = await tx.wait()
     const id = idFromEvents(receipt.events)
@@ -129,7 +129,7 @@ export class ForumAPI {
    * @throws if comment.postId is missing, if no post exists with that id, or if the content storage fails
    */
   async addComment(comment: CommentContent): Promise<ItemId> {
-    const cid = await this.#storeCommentContent(comment)
+    const cid = await this.#storeItemContent(comment)
     const tx = await this.#getAuthorizedContract().addComment(comment.parentId, cid)
     const receipt = await tx.wait()
     const id = idFromEvents(receipt.events)
@@ -189,23 +189,15 @@ export class ForumAPI {
   }
 
   /**
-   * Stores a PostContent object as JSON with web3.storage.
+   * Stores an ItemContent object as JSON with web3.storage.
    * 
-   * @param p - a PostContent object
+   * @param c - an ItemContent object
    * @returns - a promise that resoves to the CID of the content, encoded as a string
    */
-  async #storePostContent(p: PostContent): Promise<CIDString> {
-    return this.#storeAsJson(p)
-  }
-
-  /**
-   * Stores a CommentContent object as JSON with web3.storage.
-   * 
-   * @param p - a CommentContent object
-   * @returns - a promise that resoves to the CID of the content, encoded as a string
-   */
-  async #storeCommentContent(c: CommentContent): Promise<CIDString> {
-    return this.#storeAsJson(c)
+  async #storeItemContent(c: ItemContent): Promise<CIDString> {
+    const cid = await this.#storeAsJson(c)
+    this.#itemContentCache.set(cid, c)
+    return cid
   }
 
   /**
