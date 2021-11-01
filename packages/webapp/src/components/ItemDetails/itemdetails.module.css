@@ -23,3 +23,7 @@
     margin: 15px;
     color: var(--color-muted-text);
 }
+
+.loggedOutMessage {
+  padding: 20px;
+}
