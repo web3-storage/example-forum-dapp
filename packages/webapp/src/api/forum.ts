@@ -86,15 +86,29 @@ export class ForumAPI {
 
 
     const currentBlock = await this.#readonlyContract.provider.getBlockNumber()
-    const BLOCK_TIMESPAN = limit
-    const fromBlock = Math.max(0, currentBlock - BLOCK_TIMESPAN)
-    const filter = this.#readonlyContract.filters.NewItem(null, BigNumber.from(0), null)
-    
-    const events = await this.#readonlyContract.queryFilter(filter, fromBlock, currentBlock)
-    const ids = allIdsFromEvents(events)
+    const blocksPerPage = 20
+
+    let fromBlock = Math.max(0, currentBlock - blocksPerPage)
+    let toBlock = currentBlock
+    let ids: ItemId[] = []
+    while (ids.length < limit && toBlock > 0) {
+      const someIds = await this.#getPostIdsFromEvents(fromBlock, toBlock)
+      ids = ids.concat(...someIds)
+      toBlock = fromBlock
+      fromBlock = Math.max(0, fromBlock - blocksPerPage)
+    }
 
     const promises = ids.map(id => this.getItem(id, { includeScore }))
     return Promise.all(promises)
+  }
+
+
+  async #getPostIdsFromEvents(fromBlock: string | number, toBlock: string | number): Promise<ItemId[]> {
+    // filter NewItem events - we want posts, which have parent id == 0
+    const filter = this.#readonlyContract.filters.NewItem(null, BigNumber.from(0), null)
+    
+    const events = await this.#readonlyContract.queryFilter(filter, fromBlock, toBlock)
+    return allIdsFromEvents(events)
   }
 
 
