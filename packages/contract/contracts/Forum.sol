@@ -59,9 +59,6 @@ contract Forum {
   /// @dev maps item id to item
   mapping(uint256 => Item) private items;
 
-  /// @dev array of all post ids, with oldest posts at beginning
-  uint256[] private postIds;
-
   /// @notice NewItem events are emitted when a post or comment is created.
   event NewItem(
     uint256 indexed id,
@@ -92,27 +89,6 @@ contract Forum {
     return items[itemId];
   }
 
-  /**
-   * @notice Return up to `limit` posts, in reverse chronological order.
-   * @dev The returned array may have fewer than `limit` items if there aren't many posts.
-   */
-  function getRecentPosts(uint8 limit) public view returns (Item[] memory) {
-    if (limit > postIds.length) {
-      limit = uint8(postIds.length);
-    }
-    Item[] memory out = new Item[](limit);
-    if (limit == 0) {
-      return out;
-    }
-
-    uint lastPost = postIds.length - 1; 
-    for (uint8 i = 0; i < limit; i++) {
-      uint postIndex = lastPost - i;
-      uint postId = postIds[postIndex];
-      out[i] = items[postId];
-    }
-    return out;
-  }
 
   /** 
     * @notice Adds a comment to a post or another comment.

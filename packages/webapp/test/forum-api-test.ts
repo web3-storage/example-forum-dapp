@@ -14,6 +14,7 @@ chai.use(chaiAsPromised)
 import { ForumAPI as Forum, Upvote, Downvote, NoVote, VoteValue, Address } from '../src/api/forum'
 import type { ForumContract } from '../src/api/forum'
 import ForumArtifact from '../../contract/artifacts/contracts/Forum.sol/Forum.json'
+import { BigNumber } from '@ethersproject/bignumber'
 
 
 describe("ForumAPI", function () {
@@ -64,7 +65,7 @@ describe("ForumAPI", function () {
   describe("Posts", async () => {
     it("Should store and retrieve posts", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!", title: 'A great post' }
+      const postObj = { itemKind: 'POST', body: "This is an amazing post!", title: 'A great post' } as const
       stubStoragePut(cid)
 
       const postId = await forum.addPost(postObj)
@@ -72,16 +73,15 @@ describe("ForumAPI", function () {
 
       stubGetFile(JSON.stringify(postObj))
 
-      const post = await forum.getPost(postId)
+      const post = await forum.getItem(postId)
       expect(post.id).to.equal(postId)
       expect(post.author).to.equal(mainAccount)
       expect(post.content.body).to.equal(postObj.body)
-      expect(post.content.refs).to.be.empty
     })
 
     it("Should return recent posts in reverse chronological order", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!", title: 'A great post' }
+      const postObj = { itemKind: 'POST', body: "This is an amazing post!", title: 'A great post' } as const 
       stubStoragePut(cid)
       stubGetFile(JSON.stringify(postObj))
 
@@ -94,47 +94,26 @@ describe("ForumAPI", function () {
         lastId = await forum.addPost(postObj)
       }
 
-      const recent = await forum.getRecentPosts(limit)
+      const recent = await forum.getRecentPosts({ limit })
       expect(recent.length).to.equal(limit)
       expect(recent[0].id).to.equal(lastId)
     })
 
-    it("Should store attachments to a post", async () => {
-      const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { 
-        body: "This is an amazing post!", title: 'A great post', 
-        attachments: [
-          { name: 'file.txt', content: "Some text content" }
-        ] 
-      }
-
-      stubStoragePut(cid)
-      const postId = await forum.addPost(postObj)
-      expect(postId).to.not.be.empty
-      stubGetFile(JSON.stringify(postObj))
-
-      const post = await forum.getPost(postId)
-      expect(post.content.attachments).to.be.undefined // attachments are converted to refs when adding
-      expect(post.content.refs).to.not.be.empty
-      expect(post.content.refs![0].name).to.equal('file.txt')
-      expect(post.content.refs![0].ipfsPath).to.not.be.empty
-    })
-
-    it("Should fail to retrieve a post that does not exist", async () => {
-      expect(forum.getPost(123)).to.be.rejectedWith('No post found')
+    it("Should fail to retrieve an item that does not exist", async () => {
+      expect(forum.getItem(123)).to.be.rejectedWith('No item found')
     })
   })
 
   describe("Comments", async () => {
     it("Should add comments for a post", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!", title: 'A great post' }
+      const postObj = { itemKind: 'POST', body: "This is an amazing post!", title: 'A great post' } as const
       stubStoragePut(cid)
 
-      const postId = await forum.addPost(postObj)
-      expect(postId).to.not.be.empty
+      const parentId = await forum.addPost(postObj)
+      expect(parentId).to.not.be.empty
 
-      const commentObj = { body: "This is a great comment!", postId }
+      const commentObj = { itemKind: 'COMMENT', body: "This is a great comment!", parentId } as const
       const commentId = await forum.addComment(commentObj)
       expect(commentId).to.not.be.empty
 
@@ -142,41 +121,36 @@ describe("ForumAPI", function () {
       const c = await forum.getComment(commentId)
       expect(c.id).to.equal(commentId)
       expect(c.author).to.equal(mainAccount)
-      expect(c.content.postId).to.equal(commentObj.postId)
       expect(c.content.body).to.equal(commentObj.body)
-      expect(c.content.refs).to.be.empty
     })
 
     it("Should fail to retrieve a comment that does not exist", async () => {
-      expect(forum.getComment(123)).to.be.rejectedWith('No comment found')
+      expect(forum.getComment(123)).to.be.rejectedWith('No item found')
     })
 
     it("Should not add comments for a post that doesn't exist", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
       stubStoragePut(cid)
-      expect(forum.addComment({ postId: '123', body: 'foo' })).to.be.revertedWith('Post does not exist')
+      expect(forum.addComment({ itemKind: 'COMMENT', parentId: '123', body: 'foo' })).to.be.revertedWith('Parent item does not exist')
     })
 
-    it("Should retrieve all comments for a post", async () => {
+    it("Should include comment in child ids of parent post", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!", title: 'A great post' }
+      const postObj = { itemKind: 'POST', body: "This is an amazing post!", title: 'A great post' } as const
       stubStoragePut(cid)
 
-      const postId = await forum.addPost(postObj)
-      expect(postId).to.not.be.empty
+      const parentId = await forum.addPost(postObj)
+      expect(parentId).to.not.be.empty
 
-      const commentObj = { body: "This is a great comment!", postId }
+      const commentObj = { itemKind: 'COMMENT', body: "This is a great comment!",  parentId } as const
       const commentId = await forum.addComment(commentObj)
       expect(commentId).to.not.be.empty
 
-      const newCommentId = await forum.addComment(commentObj)
-
       stubGetFile(JSON.stringify(commentObj))
 
-      const comments = await forum.getCommentsForPost(postId)
-      expect(comments.length).to.equal(2)
-      expect(comments[0].id).to.equal(commentId)
-      expect(comments[1].id).to.equal(newCommentId)
+      const post = await forum.getItem(parentId)
+      expect(post.childIds.length).to.equal(1)
+      expect(post.childIds[0].toString()).to.equal(commentId.toString())
     })
   })
 
@@ -184,7 +158,7 @@ describe("ForumAPI", function () {
 
     it("Should allow voting on a post", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!", title: 'A great post' }
+      const postObj = { itemKind: 'POST', body: "This is an amazing post!", title: 'A great post' } as const
       stubStoragePut(cid)
 
       const postId = await forum.addPost(postObj)
@@ -192,38 +166,34 @@ describe("ForumAPI", function () {
 
       expect(forum.getVotes(postId)).to.eventually.equal(0)
 
-      await forum.voteForPost(postId, Upvote)
+      await forum.voteForItem(postId, Upvote)
       expect(forum.getVotes(postId)).to.eventually.equal(1)
     })
 
     it("Should allow voting on a comment", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!", title: 'A great post' }
+      const postObj = { itemKind: 'POST', body: "This is an amazing post!", title: 'A great post' } as const
       stubStoragePut(cid)
 
-      const postId = await forum.addPost(postObj)
-      expect(postId).to.not.be.empty
+      const parentId = await forum.addPost(postObj)
+      expect(parentId).to.not.be.empty
 
-      const commentObj = { body: "This is a great comment!", postId }
+      const commentObj = { itemKind: 'COMMENT', body: "This is a great comment!", parentId } as const
       const commentId = await forum.addComment(commentObj)
       expect(commentId).to.not.be.empty
 
       expect(forum.getVotes(commentId)).to.eventually.equal(0)
-      await forum.voteForComment(commentId, Upvote)
+      await forum.voteForItem(commentId, Upvote)
       expect(forum.getVotes(commentId)).to.eventually.equal(1)
     })
 
-    it("Should fail to vote if post does not exist", async () => {
-      expect(forum.voteForPost('123', Upvote)).to.be.revertedWith('Post does not exist')
-    })
-
-    it("Should fail to vote if comment does not exist", async () => {
-      expect(forum.voteForComment('123', Upvote)).to.be.revertedWith('Comment does not exist')
+    it("Should fail to vote if item does not exist", async () => {
+      expect(forum.voteForItem('123', Upvote)).to.be.revertedWith('Item does not exist')
     })
 
     it("Should only count upvotes from the same voter once", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!", title: 'A great post' }
+      const postObj = { itemKind: 'POST', body: "This is an amazing post!", title: 'A great post' } as const
       stubStoragePut(cid)
 
       const postId = await forum.addPost(postObj)
@@ -231,14 +201,14 @@ describe("ForumAPI", function () {
 
       expect(forum.getVotes(postId)).to.eventually.equal(0)
 
-      await forum.voteForPost(postId, Upvote)
-      await forum.voteForPost(postId, Upvote)
+      await forum.voteForItem(postId, Upvote)
+      await forum.voteForItem(postId, Upvote)
       expect(forum.getVotes(postId)).to.eventually.equal(1)
     })
 
     it("Should only count downvotes from the same voter once", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!", title: 'A great post' }
+      const postObj = { itemKind: 'POST', body: "This is an amazing post!", title: 'A great post' } as const
       stubStoragePut(cid)
 
       const postId = await forum.addPost(postObj)
@@ -246,29 +216,29 @@ describe("ForumAPI", function () {
 
       expect(forum.getVotes(postId)).to.eventually.equal(0)
 
-      await forum.voteForPost(postId, Downvote)
-      await forum.voteForPost(postId, Downvote)
+      await forum.voteForItem(postId, Downvote)
+      await forum.voteForItem(postId, Downvote)
       expect(forum.getVotes(postId)).to.eventually.equal(-1)
     })
 
     it("Should allow a voter to remove their vote", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!", title: 'A great post' }
+      const postObj = { itemKind: 'POST', body: "This is an amazing post!", title: 'A great post' } as const
       stubStoragePut(cid)
 
       const postId = await forum.addPost(postObj)
       expect(postId).to.not.be.empty
 
       expect(forum.getVotes(postId)).to.eventually.equal(0)
-      await forum.voteForPost(postId, Upvote)
+      await forum.voteForItem(postId, Upvote)
       expect(forum.getVotes(postId)).to.eventually.equal(1)
-      await forum.voteForPost(postId, NoVote)
+      await forum.voteForItem(postId, NoVote)
       expect(forum.getVotes(postId)).to.eventually.equal(0)
     })
 
     it("Should combine votes from multiple voters", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!", title: 'A great post' }
+      const postObj = { itemKind: 'POST', body: "This is an amazing post!", title: 'A great post' } as const
       stubStoragePut(cid)
 
       const postId = await forum.addPost(postObj)
@@ -276,21 +246,21 @@ describe("ForumAPI", function () {
 
       expect(forum.getVotes(postId)).to.eventually.equal(0)
 
-      await forum.voteForPost(postId, Upvote)
+      await forum.voteForItem(postId, Upvote)
       expect(forum.getVotes(postId)).to.eventually.equal(1)
 
-      await otherUserForum.voteForPost(postId, Upvote)
+      await otherUserForum.voteForItem(postId, Upvote)
       expect(forum.getVotes(postId)).to.eventually.equal(2)
     })
 
 
     it("Should fail to vote if vote value is invalid", async () => {
       const cid = 'bafybeifjdits7w4teaulpobkbsnufd34glbg5x2fqdwcwuj2vfxwcqyvpa'
-      const postObj = { body: "This is an amazing post!", title: 'A great post' }
+      const postObj = { itemKind: 'POST', body: "This is an amazing post!", title: 'A great post' } as const
       stubStoragePut(cid)
 
       const postId = await forum.addPost(postObj)
-      expect(forum.voteForPost(postId, 123 as VoteValue)).to.be.rejectedWith('Invalid vote value')
+      expect(forum.voteForItem(postId, 123 as VoteValue)).to.be.rejectedWith('Invalid vote value')
     })
   })
 })

@@ -26,7 +26,6 @@ interface ForumInterface extends ethers.utils.Interface {
     "getAuthorKarma(address)": FunctionFragment;
     "getItem(uint256)": FunctionFragment;
     "getItemScore(uint256)": FunctionFragment;
-    "getRecentPosts(uint8)": FunctionFragment;
     "voteForItem(uint256,int8)": FunctionFragment;
   };
 
@@ -48,10 +47,6 @@ interface ForumInterface extends ethers.utils.Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "getRecentPosts",
-    values: [BigNumberish]
-  ): string;
-  encodeFunctionData(
     functionFragment: "voteForItem",
     values: [BigNumberish, BigNumberish]
   ): string;
@@ -65,10 +60,6 @@ interface ForumInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: "getItem", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "getItemScore",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getRecentPosts",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -181,31 +172,6 @@ export class Forum extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
 
-    getRecentPosts(
-      limit: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<
-      [
-        ([
-          number,
-          BigNumber,
-          BigNumber,
-          string,
-          BigNumber,
-          BigNumber[],
-          string
-        ] & {
-          kind: number;
-          id: BigNumber;
-          parentId: BigNumber;
-          author: string;
-          createdAtBlock: BigNumber;
-          childIds: BigNumber[];
-          contentCID: string;
-        })[]
-      ]
-    >;
-
     voteForItem(
       itemId: BigNumberish,
       voteValue: BigNumberish,
@@ -246,21 +212,6 @@ export class Forum extends BaseContract {
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
-  getRecentPosts(
-    limit: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<
-    ([number, BigNumber, BigNumber, string, BigNumber, BigNumber[], string] & {
-      kind: number;
-      id: BigNumber;
-      parentId: BigNumber;
-      author: string;
-      createdAtBlock: BigNumber;
-      childIds: BigNumber[];
-      contentCID: string;
-    })[]
-  >;
-
   voteForItem(
     itemId: BigNumberish,
     voteValue: BigNumberish,
@@ -300,29 +251,6 @@ export class Forum extends BaseContract {
       itemId: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
-
-    getRecentPosts(
-      limit: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<
-      ([
-        number,
-        BigNumber,
-        BigNumber,
-        string,
-        BigNumber,
-        BigNumber[],
-        string
-      ] & {
-        kind: number;
-        id: BigNumber;
-        parentId: BigNumber;
-        author: string;
-        createdAtBlock: BigNumber;
-        childIds: BigNumber[];
-        contentCID: string;
-      })[]
-    >;
 
     voteForItem(
       itemId: BigNumberish,
@@ -378,11 +306,6 @@ export class Forum extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    getRecentPosts(
-      limit: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
     voteForItem(
       itemId: BigNumberish,
       voteValue: BigNumberish,
@@ -414,11 +337,6 @@ export class Forum extends BaseContract {
 
     getItemScore(
       itemId: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    getRecentPosts(
-      limit: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 

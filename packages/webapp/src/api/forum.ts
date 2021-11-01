@@ -84,8 +84,15 @@ export class ForumAPI {
     const limit = opts.limit || 20
     const { includeScore } = opts
 
-
+    // page through the event log, querying in batches of a few block at a time
+    // until we have enough items, or until we hit block zero.
+    //
+    // FIXME: scanning back to block zero is fine for local dev, but a real deployment
+    // should only scan back until the block the contract was deployed.
     const currentBlock = await this.#readonlyContract.provider.getBlockNumber()
+    if (currentBlock === 0) {
+      return []
+    }
     const blocksPerPage = 20
 
     let fromBlock = Math.max(0, currentBlock - blocksPerPage)
@@ -93,11 +100,14 @@ export class ForumAPI {
     let ids: ItemId[] = []
     while (ids.length < limit && toBlock > 0) {
       const someIds = await this.#getPostIdsFromEvents(fromBlock, toBlock)
+      // return in reverse-chronological order
+      someIds.reverse()
       ids = ids.concat(...someIds)
+      ids = ids.filter(id => !!id)
       toBlock = fromBlock
       fromBlock = Math.max(0, fromBlock - blocksPerPage)
     }
-
+    ids = ids.slice(0, limit)
     const promises = ids.map(id => this.getItem(id, { includeScore }))
     return Promise.all(promises)
   }
