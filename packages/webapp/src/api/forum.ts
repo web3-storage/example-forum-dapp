@@ -1,8 +1,8 @@
-import type { BigNumberish } from 'ethers'
+import { BigNumber } from 'ethers'
 
 import { File } from 'web3.storage'
 import type { Web3Storage } from 'web3.storage'
-import type { Event, BigNumber } from 'ethers'
+import type { Event, BigNumberish } from 'ethers'
 import type { Forum as ForumContract } from '../../../contract/typechain'
 export type { Forum as ForumContract } from '../../../contract/typechain'
 
@@ -25,6 +25,7 @@ export class ForumAPI {
   #readonlyContract: ForumContract
   #authorizedContract: ForumContract | undefined
   #storage: Web3Storage
+  #itemContentCache: Map<CIDString, ItemContent> = new Map()
 
   constructor(opts: ForumAPIOptions) {
     this.#readonlyContract = opts.readonlyContract
@@ -83,19 +84,17 @@ export class ForumAPI {
     const limit = opts.limit || 20
     const { includeScore } = opts
 
-    const postStructs = await this.#readonlyContract.getRecentPosts(limit)
-    const promises = postStructs.map(p => this.#hydrateItem(p))
-    const posts = await Promise.all(promises)
 
-    if (includeScore) {
-      const scorePromises = postStructs.map(p => this.#readonlyContract.getItemScore(p.id))
-      const scores = await Promise.all(scorePromises)
-      for (let i = 0; i < posts.length; i++) {
-        posts[i].score = scores[i].toNumber()
-      }
-    }
+    const currentBlock = await this.#readonlyContract.provider.getBlockNumber()
+    const BLOCK_TIMESPAN = limit
+    const fromBlock = Math.max(0, currentBlock - BLOCK_TIMESPAN)
+    const filter = this.#readonlyContract.filters.NewItem(null, BigNumber.from(0), null)
+    
+    const events = await this.#readonlyContract.queryFilter(filter, fromBlock, currentBlock)
+    const ids = allIdsFromEvents(events)
 
-    return posts
+    const promises = ids.map(id => this.getItem(id, { includeScore }))
+    return Promise.all(promises)
   }
 
 
@@ -132,10 +131,15 @@ export class ForumAPI {
 
   async #hydrateItem(itemStruct: ItemStruct): Promise<Item> {
     const { contentCID } = itemStruct
+    if (this.#itemContentCache.has(contentCID)) {
+      const content = this.#itemContentCache.get(contentCID)!
+      return { ...itemStruct, content }
+    }
     
     // use contentCID to fetch item content
     console.log(`fectching content for item ${itemStruct.id}. CID: ${contentCID}`)
-    const content = await this.#getJson(contentCID)
+    const content = await this.#getJson(contentCID) as ItemContent // TODO: validate!
+    this.#itemContentCache.set(contentCID, content)
     return { ...itemStruct, content }
   }
 
@@ -228,12 +232,14 @@ export class ForumAPI {
  */
 function idFromEvents(events: Event[] | undefined): ItemId | undefined {
   if (!events) {
+    console.warn('cant get id from events: no events')
     return
   }
 
   let id: string | undefined
   for (const event of events) {
     if (event.event !== 'NewItem' || !event.args) {
+      console.log('ignoring unexpected event', event.event)
       continue
     }
     if (!('id' in event.args)) {
@@ -244,6 +250,11 @@ function idFromEvents(events: Event[] | undefined): ItemId | undefined {
   return id
 }
 
+
+function allIdsFromEvents(events: Event[]): ItemId[] {
+  return events.filter(e => e.event === 'NewItem' && e.args && e.args.id != null)
+    .map(e => e.args!['id'])
+}
 
 //#endregion helpers
 
@@ -267,7 +278,7 @@ export interface Item {
   childIds: ItemId[],
   contentCID: CIDString,
   createdAtBlock: BigNumber,
-  content: PostContent | CommentContent,
+  content: ItemContent,
 
   score?: number,
 }
@@ -281,6 +292,8 @@ export interface Comment extends Item {
   kind: ItemKind.COMMENT
   content: CommentContent
 }
+
+export type ItemContent = PostContent | CommentContent
 
 export interface PostContent {
   itemKind: 'POST',
