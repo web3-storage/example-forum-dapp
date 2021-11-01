@@ -1,0 +1,5 @@
+{
+  "itemKind": "POST",
+  "title": "Show Web3: Web3 News, a decentralized forum example app",
+  "body": "This app was made to show off https://web3.storage, a free decentralized storage service built on IPFS and Filecoin.\n\nCheck out the code at https://github.com/web3-storage/example-forum-dapp"
+}

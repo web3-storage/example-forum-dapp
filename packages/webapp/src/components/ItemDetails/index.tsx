@@ -9,10 +9,14 @@ import styles from './itemdetails.module.css'
 import type { Item } from '../../api/forum'
 import CommentList from "../CommentList";
 import React, { useState } from "react";
+import { useChainContext } from "../../chain/context";
+import { Link } from "react-router-dom";
 
 export default function ItemDetails() {
   const { itemId } = useParams<{ itemId: string }>()
   const { api } = useApiContext()
+  const { loggedIn } = useChainContext()
+
 
   const queryOpts = { includeScore: true, includeCommentCount: true }
   const itemQuery = useQuery(
@@ -55,6 +59,22 @@ export default function ItemDetails() {
     addCommentMutation.mutate({ api, commentContent })
   }
 
+  const commentForm = (        
+    <form className={styles.commentForm} onSubmit={submitComment}>
+      <textarea value={commentText} onChange={(e) => setCommentText(e.target.value)} />
+      <button type='submit' disabled={!commentText || isPostingComment}>add comment</button>
+
+      {isPostingComment && `Submitting comment...`}
+      {commentError && `Error posting comment: ${commentError}`}
+    </form>
+  )
+
+  const loggedOutMessage = (
+    <div className={styles.loggedOutMessage}>
+      <Link to="/login">Log in</Link> to comment.
+    </div>
+  )
+
   return (
     <Layout>
       <div className={styles.container}>
@@ -66,13 +86,8 @@ export default function ItemDetails() {
           {item && item.content && item.content.body}
         </div>
 
-        <form className={styles.commentForm} onSubmit={submitComment}>
-          <textarea value={commentText} onChange={(e) => setCommentText(e.target.value)} />
-          <button type='submit' disabled={!commentText || isPostingComment}>add comment</button>
+        {loggedIn ? commentForm : loggedOutMessage}
 
-          {isPostingComment && `Submitting comment...`}
-          {commentError && `Error posting comment: ${commentError}`}
-        </form>
         {item && <CommentList api={api} parentItem={item} />}
       </div>
     </Layout>

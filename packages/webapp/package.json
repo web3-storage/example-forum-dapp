@@ -2,11 +2,13 @@
   "name": "webapp",
   "version": "0.0.0",
   "scripts": {
-    "dev": "vite",
+    "dev": "npm run seed && vite",
+    "dev:no-seed": "vite",
     "build": "tsc && vite build",
     "serve": "vite preview",
     "test": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\"}' mocha --require ts-node/register --extensions ts,tsx 'test/**/*.{ts,tsx}'",
-    "test:watch": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\"}' mocha --require ts-node/register --extensions ts,tsx --watch --watch-files src 'test/**/*.{ts,tsx}'"
+    "test:watch": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\"}' mocha --require ts-node/register --extensions ts,tsx --watch --watch-files src 'test/**/*.{ts,tsx}'",
+    "seed": "node ./scripts/seed-sample-data.js"
   },
   "dependencies": {
     "@ethersproject/providers": "^5.4.5",
@@ -29,6 +31,7 @@
     "@vitejs/plugin-react": "^1.0.0",
     "chai": "^4.3.4",
     "chai-as-promised": "^7.1.1",
+    "envfile": "^6.17.0",
     "ethereum-waffle": "^3.4.0",
     "mocha": "^9.1.2",
     "prettier": "2.4.1",
