@@ -2,7 +2,7 @@
 
 This repository contains an example of a decentralized application that uses [Web3.Storage](https://web3.storage) and [Ethereum](https://ethereum.org) to provide a simple online forum. 
 
-All post and comment content is stored on Filecoin and IPFS, while all ids and votes are stored on the Ethereum blockchain.
+All post and comment content is stored on Filecoin and IPFS, while all ids and votes are stored in an Ethereum smart contract.
 
 ![An animation showing a user posting a comment and a new post on the decentralized forum app.](./img/w3news.gif)
 
@@ -53,33 +53,54 @@ At a high level, the app works like this:
 
 A [`Forum` smart contract][src-forum-sol] is deployed to an Ethereum network, which allows creating posts, commenting on them, and voting on posts and comments.
 
-### Posts
+### 
 
-Anyone with an Ethereum account can create a new `Post` by calling the `addPost` contract function, passing in the [IPFS Content ID (CID)][ipfs-docs-cid] of the post content, which is stored as a JSON file.
+Posts and comments are represented internally as `Item` structs:
 
-When a post is created, the `NewPost` event is emitted, containing the unique id of the post and the author's address.
+```solidity
+  /**
+    * @notice Represents a single forum post or comment. 
+    */
+  struct Item {
+    /// @notice what kind of item (post or comment)
+    ItemKind kind;
 
-Once a post is created, you can call `getPost(postId)`, which returns a `Post` struct containing the post id, author address, and content CID.
+    /// @notice Unique item id, assigned at creation time.
+    uint256 id;
 
-### Comments
+    /// @notice Id of parent item. Posts have parentId == 0.
+    uint256 parentId;
 
-Anyone can comment on a post by calling the `addComment` contract function, passing in the post ID and the IPFS CID of a comment JSON file.
+    /// @notice address of author.
+    address author;
 
-Comments can be fetched by id using the `getComment(commentId)` function, which returns a `Comment` struct containing the comment id, post id, author address and content CID.
+    /// @notice block number when item was submitted
+    uint256 createdAtBlock;
 
-You can fetch all the comments associated with a post by calling `getPostComments(postId)`, which returns an array of `Comment` structs. Note that this will become increasingly expensive as many comments are added.
+    /// @notice ids of all child items, with oldest items at front.
+    uint256[] childIds;
+
+    /// @notice IPFS CID of item content.
+    string contentCID;
+  }
+```
+
+Each `Item` has a `kind` field that can be either `ItemKind.POST` or `ItemKind.COMMENT`. Comments link to their parent post (or comment) using the `parentId` field, and parents keep a list of their children in the `childIds` field. When a new child commment is added, the parent's `childIds` is updated to include the new child.
+
+The content of the post or comment is stored as a JSON file in IPFS and Filecoin using [Web3.Storage](https://web3.storage), and the file's CID is stored in the `contentCID` field.
+
+You can retrieve a comment or post with the `getItem` contract function, passing in the item's id. You then need to fetch the content from IPFS and parse the JSON in order to render the complete item.
 
 ### Voting
 
-Anyone can vote on a comment or post by calling either `voteForPost(postId, voteValue)` or `voteForComment(commentId, voteValue)`, where `voteValue` is `-1` for a downvote, `+1` for an upvote, or `0` to retract a previous vote.
+Anyone can vote on a comment or post by calling either `voteForItem(itemId, voteValue)`  where `voteValue` is `-1` for a downvote, `+1` for an upvote, or `0` to retract a previous vote.
 
 Each account can only vote once for each post or comment - subequent votes replace the previous vote from that account.
 
-You can retrive the vote total for a post or comment with `getVotes(postOrCommentId)`, which returns the sum of all up and downvotes.
+You can retrive the vote total for a post or comment with `getItemScore(itemId)`, which returns the sum of all up and downvotes.
 
-To get the "post karma" or number of votes an author has recieved for their posts, call `getPostKarma(author)`, passing in the author's address.
+To get the "karma" or number of votes an author has recieved for their posts and comments, call `getAuthorKarma(author)`, passing in the author's address.
 
-To get the "comment karma", or number of votes an author has received for their comments, call `getCommentKarma(author)`.
 
 See [`packages/contract`](./packages/contract/README.md) for details about the smart contract.
 See [`packages/webapp](./packages/webapp/README.md) for deatails about the user interface.
