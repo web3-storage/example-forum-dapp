@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
 import { useQuery } from "react-query";
 import { Link } from "react-router-dom";
 import { ForumAPI, Post } from "../../api/forum";
-import { postQueryKeys } from "../../api/queries";
-import PostHeader from "../PostHeader";
+import { recentPostQueryKeys } from "../../api/queries";
+import ItemSummary from "../ItemSummary";
 import styles from './postlist.module.css'
 
 interface Props {
@@ -14,7 +13,7 @@ export default function PostList(props: Props) {
     const { api } = props
 
     const opts = { includeScore: true, includeCommentCount: true}
-    const queryKey = postQueryKeys.recentPostsWithOptions(opts)
+    const queryKey = recentPostQueryKeys.recentPostsWithOptions(opts)
     const { isLoading, isError, data, error } = 
         useQuery(queryKey, () => {
             console.log('fetching recent posts with options', opts)
@@ -32,7 +31,7 @@ export default function PostList(props: Props) {
     const postViews = posts.map((p, i) => (
       <div className={styles.postEntry} key={`post-${p.id}`}>
         <span className={styles.rankNumber}>{`${i+1}.`}</span>
-        <PostHeader post={p} />
+        <ItemSummary item={p} />
       </div>
     ))
 

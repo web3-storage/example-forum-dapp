@@ -1,8 +1,8 @@
-import type { BigNumberish } from 'ethers'
+import { BigNumber } from 'ethers'
 
 import { File } from 'web3.storage'
 import type { Web3Storage } from 'web3.storage'
-import type { Event, BigNumber } from 'ethers'
+import type { Event, BigNumberish } from 'ethers'
 import type { Forum as ForumContract } from '../../../contract/typechain'
 export type { Forum as ForumContract } from '../../../contract/typechain'
 
@@ -25,6 +25,7 @@ export class ForumAPI {
   #readonlyContract: ForumContract
   #authorizedContract: ForumContract | undefined
   #storage: Web3Storage
+  #itemContentCache: Map<CIDString, ItemContent> = new Map()
 
   constructor(opts: ForumAPIOptions) {
     this.#readonlyContract = opts.readonlyContract
@@ -46,11 +47,11 @@ export class ForumAPI {
    * @returns the unique id of the new post.
    * @throws if content storage fails.
    */
-  async addPost(post: PostContent): Promise<PostId> {
+  async addPost(post: PostContent): Promise<ItemId> {
     const cid = await this.#storePostContent(post)
     const tx = await this.#getAuthorizedContract().addPost(cid)
     const receipt = await tx.wait()
-    const id = idFromEvents('NewPost', receipt.events)
+    const id = idFromEvents(receipt.events)
     if (!id) {
       throw new Error('unable to determine post id')
     }
@@ -58,72 +59,58 @@ export class ForumAPI {
   }
 
   /**
-   * Retrieves a post by its id by fetching the content CID from the blockchain,
+   * Retrieves an item by its id by fetching the content CID from the blockchain,
    * then fetching content from IPFS using the Web3.Storage client.
    * 
-   * @param postId the id of a post to fetch.
-   * @returns the post with the given id.
-   * @throws if no post exists with the given ID, or if the post content fails to load
+   * @param itemId the id of a post or comment to fetch.
+   * @returns the item with the given id.
+   * @throws if no item exists with the given ID, or if the item content fails to load
    */
-  async getPost(postId: PostId, opts?: { includeScore?: boolean, includeCommentCount?: boolean}): Promise<Post> {
-    const postStruct = await this.#readonlyContract.getPost(postId)
-    const post = await this.#hydratePost(postStruct)
+  async getItem(itemId: ItemId, opts?: { includeScore?: boolean }): Promise<Item> {
+    const itemStruct = await this.#readonlyContract.getItem(itemId)
+    const item = await this.#hydrateItem(itemStruct)
 
-    const { includeScore, includeCommentCount } = opts || {}
+    const { includeScore } = opts || {}
     if (includeScore) {
-      const score = await this.#readonlyContract.getPostScore(postId)
-      post.score = score.toNumber()
+      const score = await this.#readonlyContract.getItemScore(itemId)
+      item.score = score.toNumber()
     }
 
-    if (includeCommentCount) {
-      const numComments = await this.#readonlyContract.getNumberOfComments(postId)
-      post.numComments = numComments.toNumber()
-    }
-
-    return post
+    return item
   }
 
 
-  async getRecentPosts(opts: {limit?: number, includeScore?: boolean, includeCommentCount?: boolean} = {}): Promise<Post[]> {
+  async getRecentPosts(opts: {limit?: number, includeScore?: boolean} = {}): Promise<Item[]> {
     const limit = opts.limit || 20
-    const { includeScore, includeCommentCount } = opts
+    const { includeScore } = opts
 
-    const postStructs = await this.#readonlyContract.getRecentPosts(limit)
 
-    const promises = postStructs.map(p => this.#hydratePost(p))
-    const posts = await Promise.all(promises)
+    const currentBlock = await this.#readonlyContract.provider.getBlockNumber()
+    const blocksPerPage = 20
 
-    if (includeScore) {
-      const scorePromises = postStructs.map(p => this.#readonlyContract.getPostScore(p.id))
-      const scores = await Promise.all(scorePromises)
-      for (let i = 0; i < posts.length; i++) {
-        posts[i].score = scores[i].toNumber()
-      }
+    let fromBlock = Math.max(0, currentBlock - blocksPerPage)
+    let toBlock = currentBlock
+    let ids: ItemId[] = []
+    while (ids.length < limit && toBlock > 0) {
+      const someIds = await this.#getPostIdsFromEvents(fromBlock, toBlock)
+      ids = ids.concat(...someIds)
+      toBlock = fromBlock
+      fromBlock = Math.max(0, fromBlock - blocksPerPage)
     }
 
-    if (includeCommentCount) {
-      const countPromises = postStructs.map(p => this.#readonlyContract.getNumberOfComments(p.id))
-      const counts = await Promise.all(countPromises)
-      for (let i = 0; i < posts.length; i++) {
-        posts[i].numComments = counts[i].toNumber()
-      }
-    }
-    return posts
+    const promises = ids.map(id => this.getItem(id, { includeScore }))
+    return Promise.all(promises)
   }
 
-  async #hydratePost(postStruct: PostStruct): Promise<Post> {
-    const { contentCID, author, createdAtBlock } = postStruct
-    if (!contentCID) {
-      throw new Error(`post struct has no content cid`)
-    }
-    const id = postStruct.id.toString()
 
-    // use the CID to fetch the post content
-    const postObject = await this.#getJson(contentCID)
-    // TODO: validate postObject
-    const content = postObject as PostContent
-    return { content, contentCID, id, author, createdAtBlock }
+  async #getPostIdsFromEvents(fromBlock: string | number, toBlock: string | number): Promise<ItemId[]> {
+    // filter NewItem events - we want posts, which have parent id == 0
+    const filter = this.#readonlyContract.filters.NewItem(null, BigNumber.from(0), null)
+    
+    const events = await this.#readonlyContract.queryFilter(filter, fromBlock, toBlock)
+    return allIdsFromEvents(events)
   }
+
 
   /**
    * Adds a comment to an existing post.
@@ -131,11 +118,11 @@ export class ForumAPI {
    * @returns the unique id of the new comment
    * @throws if comment.postId is missing, if no post exists with that id, or if the content storage fails
    */
-  async addComment(comment: CommentContent): Promise<CommentId> {
+  async addComment(comment: CommentContent): Promise<ItemId> {
     const cid = await this.#storeCommentContent(comment)
-    const tx = await this.#getAuthorizedContract().addComment(comment.postId, cid)
+    const tx = await this.#getAuthorizedContract().addComment(comment.parentId, cid)
     const receipt = await tx.wait()
-    const id = idFromEvents('NewComment', receipt.events)
+    const id = idFromEvents(receipt.events)
     if (!id) {
       throw new Error('unable to determine comment id')
     }
@@ -148,122 +135,67 @@ export class ForumAPI {
    * @returns the comment with the given id
    * @throws if no comment exists with the given id, or if the content fails to load.
    */
-  async getComment(commentId: CommentId): Promise<Comment> {
+  async getComment(commentId: ItemId): Promise<Item> {
     // Get comment info from the contract
-    const commentStruct = await this.#readonlyContract.getComment(commentId)
-    return this.#hydrateComment(commentStruct)
+    const itemStruct = await this.#readonlyContract.getItem(commentId)
+    return this.#hydrateItem(itemStruct)
   }
 
-  /**
-   * Retrieves all comments attached to a given post.
-   * Note that this method _does not_ validate that the post exists. 
-   * Non-existant posts will return an empty array.
-   * 
-   * @param postId - the unique id of a post
-   * @returns - an array of Comment objects
-   */
-  async getCommentsForPost(postId: PostId): Promise<Comment[]> {
-    const commentStructs = await this.#readonlyContract.getPostComments(postId)
-    const promises = []
-    for (const c of commentStructs) {
-      promises.push(this.#hydrateComment(c))
+
+
+  async #hydrateItem(itemStruct: ItemStruct): Promise<Item> {
+    const { contentCID } = itemStruct
+    if (this.#itemContentCache.has(contentCID)) {
+      const content = this.#itemContentCache.get(contentCID)!
+      return { ...itemStruct, content }
     }
-    return Promise.all(promises)
-  }
-
-  async #hydrateComment(commentStruct: CommentStruct): Promise<Comment> {
-    const { contentCID, author, createdAtBlock } = commentStruct
-    const id = commentStruct.id.toString()
     
-    // use contentCID to fetch comment content
-    const content = await this.#getJson(contentCID) as CommentContent // TODO: validate
-    return { content, contentCID, author, id, createdAtBlock }
+    // use contentCID to fetch item content
+    console.log(`fectching content for item ${itemStruct.id}. CID: ${contentCID}`)
+    const content = await this.#getJson(contentCID) as ItemContent // TODO: validate!
+    this.#itemContentCache.set(contentCID, content)
+    return { ...itemStruct, content }
   }
 
-  /**
-   * Applies the given vote to a post.
-   * 
-   * @param postId - the unique id of a post
-   * @param vote - an upvote, downvote, or retraction
-   */
-  async voteForPost(postId: PostId, vote: VoteValue): Promise<void> {
-    const tx = await this.#getAuthorizedContract().voteForPost(postId, vote)
-    await tx.wait()
-  }
 
   /**
-   * Applies the given vote to a comment.
+   * Applies the given vote to an item.
    * 
-   * @param commentId - the unique id of a comment
+   * @param itemId - the unique id of a post or comment
    * @param vote - an upvote, downvote, or retraction
    */
-  async voteForComment(commentId: CommentId, vote: VoteValue): Promise<void> {
-    const tx = await this.#getAuthorizedContract().voteForComment(commentId, vote)
+  async voteForItem(itemId: ItemId, vote: VoteValue): Promise<void> {
+    const tx = await this.#getAuthorizedContract().voteForItem(itemId, vote)
     await tx.wait()
   }
 
   /**
    * Get the total number of votes for a post or comment. May be negative.
-   * @param postOrCommentId - unique id of post or comment
+   * @param itemId - unique id of post or comment
    * @returns - the total number of votes for the given post or comment, as an ethers BigNumber
    */
-  async getVotes(postOrCommentId: PostId | CommentId): Promise<BigNumber> {
-    return this.#readonlyContract.getVotes(postOrCommentId)
+  async getVotes(itemId: ItemId): Promise<BigNumber> {
+    return this.#readonlyContract.getItemScore(itemId)
   }
 
   /**
    * Stores a PostContent object as JSON with web3.storage.
    * 
-   * If the PostContent has any Attachments, these will be stored first
-   * and replaced with AttachmentRefs in the stored PostContent JSON.
-   * 
    * @param p - a PostContent object
    * @returns - a promise that resoves to the CID of the content, encoded as a string
    */
   async #storePostContent(p: PostContent): Promise<CIDString> {
-    const existingRefs = p.refs || []
-    const attachmentRefs = await this.#storeAttachments(p.attachments) || []
-    p.refs = [...existingRefs, ...attachmentRefs]
-    p.attachments = undefined
     return this.#storeAsJson(p)
   }
 
   /**
    * Stores a CommentContent object as JSON with web3.storage.
    * 
-   * If the CommentContent has any Attachments, these will be stored first
-   * and replaced with AttachmentRefs in the stored CommentContent JSON.
-   * 
    * @param p - a CommentContent object
    * @returns - a promise that resoves to the CID of the content, encoded as a string
    */
   async #storeCommentContent(c: CommentContent): Promise<CIDString> {
-    const existingRefs = c.refs || []
-    const attachmentRefs = await this.#storeAttachments(c.attachments) || []
-    c.refs = [...existingRefs, ...attachmentRefs]
-    c.attachments = undefined
     return this.#storeAsJson(c)
-  }
-
-  /**
-   * Stores Attachment objects with Web3.Storage and returns AttachmentRefs that link to them
-   * by IPFS path.
-   * 
-   * @param attachments - an array of Attachment objects
-   * @returns - a promise that resolves to an array of AttachmentRef objects, or undefined if the input was undefined
-   */
-  async #storeAttachments(attachments: Attachment[]|undefined): Promise<AttachmentRef[]|undefined> {
-    if (!attachments) {
-      return
-    }
-    const files = filesFromAttachments(attachments)
-    const cid = await this.#storage.put(files)
-    const refs = attachments.map(a => ({
-      name: a.name,
-      ipfsPath: `${cid}/${a.name}`
-    }))
-
-    return refs
   }
 
   /**
@@ -278,7 +210,9 @@ export class ForumAPI {
   async #storeAsJson(o: any, filename: string = 'file.json', wrapWithDirectory: boolean = false): Promise<CIDString> {
     const str = JSON.stringify(o)
     const file = new File([str], filename, { type: 'application/json' })
-    return this.#storage.put([file], { wrapWithDirectory })
+    const cid = await this.#storage.put([file], { wrapWithDirectory })
+    console.log('stored json object. cid: ', cid, o)
+    return cid
   }
 
   /**
@@ -305,20 +239,21 @@ export class ForumAPI {
 //#region helpers
 
 /**
- * Tries to extract the post or comment from an event containing an `id` arg.
+ * Tries to extract the post or comment from a `NewItem` event containing an `id` arg.
  * 
- * @param targetEvent - the name of the event containing the id. Should be one of 'NewPost` or 'NewComment'.
  * @param events - an array of ethers `Event`s to search.
- * @returns the value of `id` from the first event with the given name, or undefined if no matching event was found
+ * @returns the value of `id` from the first `NewItem` event, or undefined if no event was found
  */
-function idFromEvents(targetEvent: string, events: Event[] | undefined): PostId | CommentId | undefined {
+function idFromEvents(events: Event[] | undefined): ItemId | undefined {
   if (!events) {
+    console.warn('cant get id from events: no events')
     return
   }
 
   let id: string | undefined
   for (const event of events) {
-    if (event.event !== targetEvent || !event.args) {
+    if (event.event !== 'NewItem' || !event.args) {
+      console.log('ignoring unexpected event', event.event)
       continue
     }
     if (!('id' in event.args)) {
@@ -329,74 +264,63 @@ function idFromEvents(targetEvent: string, events: Event[] | undefined): PostId 
   return id
 }
 
-/**
- * Helper to convert attachments to File objects.
- * @param attachments an array of Attachment objects
- * @returns an Array of File objects
- */
-function filesFromAttachments(attachments: Attachment[]): File[] {
-  const files = []
-  for (const a of attachments) {
-    files.push(new File([a.content], a.name))
-  }
-  return files
-}
 
+function allIdsFromEvents(events: Event[]): ItemId[] {
+  return events.filter(e => e.event === 'NewItem' && e.args && e.args.id != null)
+    .map(e => e.args!['id'])
+}
 
 //#endregion helpers
 
 //#region types
 
-export type PostId = BigNumberish
-export type CommentId = BigNumberish
+export type ItemId = BigNumberish
 export type Address = string
 export type CIDString = string
 export type IPFSPath = string
 
-export interface Post {
-  id: PostId,
+export enum ItemKind {
+  POST = 0,
+  COMMENT,
+}
+
+export interface Item {
+  kind: ItemKind,
+  id: ItemId,
+  parentId: ItemId,
   author: Address,
-  content: PostContent,
+  childIds: ItemId[],
   contentCID: CIDString,
-  createdAtBlock: BigNumberish,
+  createdAtBlock: BigNumber,
+  content: ItemContent,
 
   score?: number,
-  numComments?: number,
 }
+
+export interface Post extends Item {
+  kind: ItemKind.POST
+  content: PostContent
+}
+
+export interface Comment extends Item {
+  kind: ItemKind.COMMENT
+  content: CommentContent
+}
+
+export type ItemContent = PostContent | CommentContent
 
 export interface PostContent {
+  itemKind: 'POST',
   title: string,
   body: string,
-  attachments?: Attachment[],
-  refs?: AttachmentRef[],
 }
 
-export interface Comment {
-  id: CommentId,
-  author: Address,
-  content: CommentContent,
-  contentCID: CIDString,
-  createdAtBlock: BigNumberish,
-}
 
 export interface CommentContent {
-  postId: PostId,
+  itemKind: 'COMMENT'
+  parentId: ItemId,
   body: string,
-  attachments?: Attachment[],
-  refs?: AttachmentRef[],
 }
-
-export interface Attachment {
-  name: string,
-  content: AttachmentContent,
-}
-
-export interface AttachmentRef {
-  name: string,
-  ipfsPath: IPFSPath,
-}
-
-export type AttachmentContent = Blob | File | Uint8Array | string
 
 export const Upvote = 1
 export const Downvote = -1
@@ -406,19 +330,14 @@ export type VoteValue = 1 | 0 | -1
 
 /// the types below are for struct types defined in the contract
 
-type PostStruct = {
-  id: BigNumber;
-  author: string;
-  contentCID: string;
-  createdAtBlock: BigNumber;
-}
-
-type CommentStruct = {
-  id: BigNumber;
-  author: string;
-  postId: BigNumber;
-  contentCID: string;
-  createdAtBlock: BigNumber;
+type ItemStruct = {
+  kind: number
+  id: BigNumber
+  parentId: BigNumber
+  author: string
+  createdAtBlock: BigNumber
+  childIds: ItemId[]
+  contentCID: string
 }
 
 //#endregion types

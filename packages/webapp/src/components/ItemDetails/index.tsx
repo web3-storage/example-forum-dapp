@@ -1,32 +1,33 @@
 import { useQuery } from "react-query";
 import { useParams } from "react-router";
 import { useApiContext } from "../../api/context";
-import { postQueryKeys, useAddComment } from "../../api/queries";
+import { itemQueryKeys, useAddComment } from "../../api/queries";
 import Layout from "../Layout";
-import PostHeader from "../PostHeader";
-import styles from './postdetails.module.css'
+import ItemSummary from "../ItemSummary";
+import styles from './itemdetails.module.css'
 
-import type { Post } from '../../api/forum'
+import type { Item } from '../../api/forum'
 import CommentList from "../CommentList";
 import React, { useState } from "react";
 
-export default function PostDetails() {
-  const { postId } = useParams<{ postId: string }>()
+export default function ItemDetails() {
+  const { itemId } = useParams<{ itemId: string }>()
   const { api } = useApiContext()
 
-  const postQueryOpts = { includeScore: true, includeCommentCount: true }
-  const postQuery = useQuery(
-    postQueryKeys.postDetail(postId, postQueryOpts),
-    () => api!.getPost(postId, postQueryOpts),
+  const queryOpts = { includeScore: true, includeCommentCount: true }
+  const itemQuery = useQuery(
+    itemQueryKeys.itemDetail(itemId, queryOpts),
+    () => api!.getItem(itemId, queryOpts),
     { 
       enabled: api != null 
     }
   )
 
+  // TODO: refactor comment box into its own component
   const [commentText, setCommentText] = useState('')
   const addCommentMutation = useAddComment()
 
-  const { isIdle, isLoading, isError, data, error } = postQuery
+  const { isIdle, isLoading, isError, data, error } = itemQuery
   const { isLoading: isPostingComment, error: commentError } = addCommentMutation
   
 
@@ -36,29 +37,33 @@ export default function PostDetails() {
     </div>
   }
 
-  const postHeader = isIdle 
+  const item = data as Item
+  const summary = isIdle 
     ? 'Connecting to smart contract..'
     : isLoading
-      ? 'Loading post details...'
+      ? 'Loading item details...'
       : isError
-        ? `Error loading post details: ${error}`
-        : <PostHeader post={data as Post} />
+        ? `Error loading item details: ${error}`
+        : <ItemSummary item={item} />
 
   const submitComment = (e: React.FormEvent) => {
     e.preventDefault()
     const commentContent = {
-      postId,
+      parentId: itemId,
       body: commentText
     }
     addCommentMutation.mutate({ api, commentContent })
   }
 
-
   return (
     <Layout>
       <div className={styles.container}>
         <div className={styles.postHeaderContainer}>
-          {postHeader}
+          {summary}
+        </div>
+
+        <div className={styles.postBody}>
+          {item && item.content && item.content.body}
         </div>
 
         <form className={styles.commentForm} onSubmit={submitComment}>
@@ -68,7 +73,7 @@ export default function PostDetails() {
           {isPostingComment && `Submitting comment...`}
           {commentError && `Error posting comment: ${commentError}`}
         </form>
-        <CommentList postId={postId} />
+        {item && <CommentList api={api} parentItem={item} />}
       </div>
     </Layout>
   )

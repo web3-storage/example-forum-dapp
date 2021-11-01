@@ -1,48 +1,42 @@
-import { useMutation, useQuery, useQueryClient } from 'react-query'
+import { useMutation, useQueryClient } from 'react-query'
 
-import type { ForumAPI, PostId, PostContent, CommentContent, VoteValue, CommentId } from './forum'
+import { ForumAPI, ItemId, PostContent, CommentContent, VoteValue, ItemKind } from './forum'
 
-export const postQueryKeys = {
+export const recentPostQueryKeys = {
     recentPosts: ['posts', 'recent'] as const,
     recentPostsWithOptions: (opts: {
         limit?: number, 
-        includeScore?: boolean, 
-        includeCommentCount?: boolean }) => 
-        [...postQueryKeys.recentPosts, opts] as const,
-
-    postDetail: (
-        postId: PostId, 
-        opts: { includeScore?: boolean, includeCommentCount?: boolean } = { }
-        ) => ['posts', 'details', postId.toString(), opts] as const,
-
+        includeScore?: boolean }) => 
+        [...recentPostQueryKeys.recentPosts, opts] as const,
 }
 
-export const commentQueryKeys = {
-    commentsForPost: (postId: PostId) => ['comments', 'for-post', postId.toString()] as const,
+export const itemQueryKeys = {
+  itemDetail: (itemId: ItemId, opts: { includeScore?: boolean } = { }) => 
+    ['items', 'details', itemId.toString(), opts] as const,
 }
 
 export function useAddPost() {
     const queryClient = useQueryClient()
-    const executor = (opts: {api: ForumAPI, postContent: PostContent}) => 
-        opts.api.addPost(opts.postContent)
+    const executor = ({api, postContent}: {api: ForumAPI, postContent: Omit<PostContent, 'itemKind'>}) => 
+        api.addPost({...postContent, itemKind: 'POST'})
 
     return useMutation(executor, {
         onSuccess: () => {
-            queryClient.invalidateQueries(postQueryKeys.recentPosts)
+            queryClient.invalidateQueries(recentPostQueryKeys.recentPosts)
         }
     })
 }
 
 export function useAddComment() {
     const queryClient = useQueryClient()
-    const fn = ({api, commentContent}: {api: ForumAPI, commentContent: CommentContent}) =>
-        api.addComment(commentContent)
+    const fn = ({api, commentContent}: {api: ForumAPI, commentContent: Omit<CommentContent, 'itemKind'>}) =>
+        api.addComment({...commentContent, itemKind: 'COMMENT'})
 
     return useMutation(fn, {
         onSuccess: (_data, { commentContent }) => {
-            console.log('posted comment successfully')
+          // invalidate the parent object
             queryClient.invalidateQueries(
-                commentQueryKeys.commentsForPost(commentContent.postId))
+                itemQueryKeys.itemDetail(commentContent.parentId))
         },
         onError: (error) => {
             console.error('error posting comment', error)
@@ -50,31 +44,18 @@ export function useAddComment() {
     })
 }
 
-export type VoteForPostOpts = {
+export type VoteForItemOpts = {
   api: ForumAPI,
-  postId: PostId,
+  itemId: ItemId,
   vote: VoteValue,
 }
 
-export function useVoteForPost() {
+export function useVoteForItem() {
     const queryClient = useQueryClient()
 
-    return useMutation(({api, postId, vote}: VoteForPostOpts) => api.voteForPost(postId, vote), {
-        onSuccess: (_data, { postId }) => {
-            queryClient.invalidateQueries(postQueryKeys.postDetail(postId, { includeCommentCount: true }))
+    return useMutation(({api, itemId, vote}: VoteForItemOpts) => api.voteForItem(itemId, vote), {
+        onSuccess: (_data, { itemId }) => {
+            queryClient.invalidateQueries(itemQueryKeys.itemDetail(itemId, { includeScore: true }))
         }
     })
-}
-
-
-export type VoteForCommentOpts = {
-  api: ForumAPI,
-  commentId: CommentId,
-  vote: VoteValue,
-}
-
-export function useVoteForComment() {
-  // TODO: invalidate comment list for parent post?
-  return useMutation(({api, commentId, vote}: VoteForCommentOpts) =>
-    api.voteForComment(commentId, vote))
 }

@@ -1,3 +1,4 @@
+@import '../../styles/vars.css';
 
 .container {
     margin: 10px;
@@ -18,3 +19,7 @@
     min-height: 80px;
 }
 
+.postBody {
+    margin: 15px;
+    color: var(--color-muted-text);
+}
