@@ -19,8 +19,8 @@ async function waitForContract() {
     if (await exists(outputFile)) {
       return
     }
+    await new Promise(resolve => setTimeout(resolve, 1000))
   }
-  await new Promise(resolve => setTimeout(resolve, 1000))
   throw new Error(`Contract output did not appear after ${maxWait} seconds`)
 }
 
