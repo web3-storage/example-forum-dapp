@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "test": "npm run test --workspaces",
-    "dev": "concurrently -n contract,webapp \"npm run dev -w packages/contract\" \"sleep 5 && npm run dev -w packages/webapp\""
+    "dev": "node ./scripts/start-dev.js"
   },
   "repository": {
     "type": "git",
