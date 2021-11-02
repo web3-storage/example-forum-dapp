@@ -23,6 +23,9 @@ export default function Submit() {
       </div>
   }
   
+  if (!api.canPost) {
+    return <Redirect to='/account' />
+  }
 
   const submitForm = (e: React.FormEvent) => {
     e.preventDefault()

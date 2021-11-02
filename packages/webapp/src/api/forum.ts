@@ -9,7 +9,7 @@ export type { Forum as ForumContract } from '../../../contract/typechain'
 export interface ForumAPIOptions {
   readonlyContract: ForumContract,
   authorizedContract?: ForumContract,
-  storage: Web3Storage,
+  storage?: Web3Storage,
 }
 
 export class NoAuthorizedAccountError extends Error {
@@ -24,13 +24,21 @@ export class NoAuthorizedAccountError extends Error {
 export class ForumAPI {
   #readonlyContract: ForumContract
   #authorizedContract: ForumContract | undefined
-  #storage: Web3Storage
+  #storage: Web3Storage | undefined
   #itemContentCache: Map<CIDString, ItemContent> = new Map()
 
   constructor(opts: ForumAPIOptions) {
     this.#readonlyContract = opts.readonlyContract
     this.#authorizedContract = opts.authorizedContract
     this.#storage = opts.storage
+  }
+
+  get canVote(): boolean {
+    return this.#authorizedContract != null
+  }
+
+  get canPost(): boolean {
+    return this.canVote && this.#storage != null
   }
 
   #getAuthorizedContract() {
@@ -210,6 +218,10 @@ export class ForumAPI {
    * If wrapWithDirectory == true, the CID will be of the directory root, and the file is accessible at `${cid}/${filename}`
    */
   async #storeAsJson(o: any, filename: string = 'file.json', wrapWithDirectory: boolean = false): Promise<CIDString> {
+    if (!this.#storage) {
+      throw new NoStorageClientError()
+    }
+
     const str = JSON.stringify(o)
     const file = new File([str], filename, { type: 'application/json' })
     const cid = await this.#storage.put([file], { wrapWithDirectory })
@@ -224,16 +236,12 @@ export class ForumAPI {
    * @returns - a promise that resolves to the parsed JSON object
    */
   async #getJson(cid: string): Promise<any> {
-    const res = await this.#storage.get(cid)
+    const url = `https://${cid}.ipfs.dweb.link`
+    const res = await fetch(url)
     if (!res || !res.ok) {
       throw new Error(`Error getting cid ${cid}: [${res?.status}] ${res?.statusText}`)
     }
-    const files = await res.files()
-    if (files.length < 1) {
-      throw new Error(`No files in response`)
-    }
-    const content = await files[0].text()
-    return JSON.parse(content)
+    return res.json()
   }
 }
 
@@ -275,6 +283,14 @@ function allIdsFromEvents(events: Event[]): ItemId[] {
 //#endregion helpers
 
 //#region types
+
+export class NoStorageClientError extends Error {
+  static CODE = 'NO_STORAGE_CLIENT'
+
+  constructor() {
+    super('No storage client - make sure you have an API token configured for your account.')
+  }
+}
 
 export type ItemId = BigNumberish
 export type Address = string

@@ -53,7 +53,7 @@ At a high level, the app works like this:
 
 A [`Forum` smart contract][src-forum-sol] is deployed to an Ethereum network, which allows creating posts, commenting on them, and voting on posts and comments.
 
-### 
+### Items
 
 Posts and comments are represented internally as `Item` structs:
 

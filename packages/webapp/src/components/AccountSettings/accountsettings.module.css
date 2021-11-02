@@ -1,0 +1,16 @@
+
+
+.container {
+  margin: 10px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.container input {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  min-width: 600px;
+}
+
