@@ -2,8 +2,7 @@
   "name": "webapp",
   "version": "0.0.0",
   "scripts": {
-    "dev": "npm run seed && vite",
-    "dev:no-seed": "vite",
+    "dev": "vite",
     "build": "tsc && vite build",
     "serve": "vite preview",
     "test": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"commonjs\"}' mocha --require ts-node/register --extensions ts,tsx 'test/**/*.{ts,tsx}'",

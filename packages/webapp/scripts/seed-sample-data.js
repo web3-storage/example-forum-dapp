@@ -1,7 +1,6 @@
 const ethers = require("ethers")
 const fs = require('fs/promises')
 const path = require('path')
-const envfile = require('envfile')
 const { Web3Storage, File } = require('web3.storage')
 
 const Deployments = require('../src/contracts/hardhat_contracts.json')
@@ -18,20 +17,10 @@ async function main() {
   const signer = await provider.getSigner()
   const forum = new ethers.Contract(deployment.address, deployment.abi, signer)
 
-  let token
-  try {
-    const envContent = await fs.readFile(path.join(__dirname, '..', '.env.development'))
-    const env = envfile.parse(envContent)
-    token = env.VITE_WEB3STORAGE_TOKEN
-  } catch (e) {
-  } 
+  const token = process.env.WEB3_STORAGE_TOKEN
 
   if (!token) {
-    token = process.env.WEB3_STORAGE_TOKEN
-  }
-
-  if (!token) {
-    throw new Error('no web3.storage api token found. either set WEB3_STORAGE_TOKEN or make a `.env.development` file in packages/webapp')
+    throw new Error('no web3.storage api token found. set the WEB3_STORAGE_TOKEN environment variable and try again')
   }
 
   const storage = new Web3Storage({ token })
