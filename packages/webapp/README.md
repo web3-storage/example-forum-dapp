@@ -21,7 +21,7 @@ an Ethereum provider. See [Ethereum interactions](#ethereum-interactions) below 
 
 ### Ethereum interactions
 
-The app uses the [ethers.js][ethers-docs] library for connecting to and interacting with the [smart contract][forum-contact-source].
+The app uses the [ethers.js][ethers-docs] library for connecting to and interacting with the [smart contract][forum-contract-source].
 
 To integrate with the React lifecycle, the [web3-react][web3-react] library provides a [Context][react-context-docs]-based API that can integrate with browser wallets like [MetaMask](https://metamask.io), as well as JSON-RPC based nodes. 
 
