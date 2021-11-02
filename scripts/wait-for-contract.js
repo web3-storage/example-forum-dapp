@@ -20,6 +20,7 @@ async function waitForContract() {
       return
     }
   }
+  await new Promise(resolve => setTimeout(resolve, 1000))
   throw new Error(`Contract output did not appear after ${maxWait} seconds`)
 }
 
