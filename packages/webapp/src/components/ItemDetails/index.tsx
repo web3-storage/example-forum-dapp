@@ -75,6 +75,12 @@ export default function ItemDetails() {
     </div>
   )
 
+  const noTokenMessage = (
+    <div className={styles.loggedOutMessage}>
+      <Link to="/account">Add a storage token to your account to comment</Link>
+    </div>
+  )
+
   return (
     <Layout>
       <div className={styles.container}>
@@ -86,7 +92,10 @@ export default function ItemDetails() {
           {item && item.content && item.content.body}
         </div>
 
-        {loggedIn ? commentForm : loggedOutMessage}
+        {loggedIn 
+          ? (api.canPost ? commentForm : noTokenMessage)
+          : loggedOutMessage
+        }
 
         {item && <CommentList api={api} parentItem={item} />}
       </div>

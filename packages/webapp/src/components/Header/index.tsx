@@ -1,5 +1,4 @@
 import { ethers } from 'ethers'
-import { useState } from 'react'
 import { useQuery, useQueryClient } from 'react-query'
 import { Link } from 'react-router-dom'
 import { NETWORK_NAME } from '../../chain/constants'
@@ -14,7 +13,6 @@ const Account = () => {
   const { account, library } = authorized
 
   const queryClient = useQueryClient()
-  const [faucetUsed, setFaucetUsed] = useState(false)
 
   const balanceKey = ['account', 'balance', account]
   const balanceQuery = useQuery(balanceKey, async () => {
@@ -49,10 +47,10 @@ const Account = () => {
 
   return (
     <>
-      <span>Account&nbsp;</span>
-      <span>
-        {accountDisplayName(account)}
-      </span>
+      <Link to='/account'>
+        <span>Account&nbsp;</span>
+        <span>{accountDisplayName(account)}</span>
+      </Link>
       <span>&nbsp;|&nbsp;</span>
       {balance && <span>Balance: {balance}&nbsp;|&nbsp;</span>}
       {showFaucetButton && <span>{faucetButton}&nbsp;|&nbsp;</span>}

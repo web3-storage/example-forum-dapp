@@ -9,6 +9,7 @@ import Login from '../Login'
 import Logout from '../Logout'
 import Home from '../Home'
 import About from "../About";
+import AccountSettings from "../AccountSettings";
 
 import { ChainContextProvider } from '../../chain/context';
 import { useEagerConnect, useReadonlyConnection } from "../../chain/hooks";
@@ -40,6 +41,9 @@ function Routes() {
     </Route>
     <Route path='/items/:itemId'>
       <ItemDetails />
+    </Route>
+    <Route path='/account'>
+      <AccountSettings />
     </Route>
   </Switch>
 }
